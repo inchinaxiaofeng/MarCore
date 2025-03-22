@@ -1,3 +1,8 @@
+BUILD_DIR = ./build
+
+resolve:
+	mill -i __.test.runMain
+
 test:
 	mill -i __.test
 
@@ -13,6 +18,14 @@ reformat:
 checkformat:
 	mill -i __.checkFormat
 
+help:
+	mill -i --help
+
+verilog:
+	mkdir -p $(BUILD_DIR)
+	mill -i MarCore.runMain Elaborate -td $(BUILD_DIR)
+
+# Installing
 install-hooks: commit-msg
 
 commit-msg:

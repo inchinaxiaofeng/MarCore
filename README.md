@@ -68,6 +68,12 @@ verilator -version
 
 # 开发者赠言
 
+## 基于Chisel的开发流程
+
+建议使用Nvim进行开发控制。在Mason中下载scala相关控件，并且基于<https://get-coursier.io/docs/cli-install> 下载cs，通过cs下载相关更多控件即可。
+
+使用Nvim及其脚本开发可以强制用户自行配置环境（不是）。
+
 ## 协作开发流程
 
 在参与项目协作时，请按照以下步骤进行操作：

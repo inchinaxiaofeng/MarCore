@@ -1,1 +1,8 @@
+.metals
+.vscode
+!.gitignore
+!.githooks
 out
+.bloop
+build
+.scalafmt.conf
