@@ -4,8 +4,13 @@ import units._
 import top._
 import top.chiplab._
 import top.sta._
+import java.nio.file.{Files, Path}
+import org.json4s.native.Json
 
 object Elaborate extends App {
+  // 读取配置文件
+//  val configJson = Files.readString(Path.of("config.json"))
+
 //  def top = if (Settings.get("FPGAPlatform")) {
 //    new SoC_LoongLabBox()
 //  } else if (Settings.get("IsSimCore")) {
