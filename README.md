@@ -64,6 +64,10 @@ verilator -version
   Verilator 5.008 2023-03-04 rev v5.008
 ```
 
+### Run
+
+Read `Makefile` and run.
+
 ---
 
 # 开发者赠言
@@ -93,10 +97,11 @@ verilator -version
 
 在提交 `PR` 之前，确保自己的 `Fork` 仓库与中心仓库保持同步。可以通过以下步骤实现：
 
-* 从中心仓库拉取最新代码，并在本地进行 `Rebase`：
+* 从中心仓库拉取最新代码，并在本地进行 `Rebase`, `Merge` 等操作。
 
 ``` bash
-git pull --rebase
+git fetch <upstream/origin>
+git <merge/rebase> <commit>
  ```
 
 * 如果存在冲突，解决冲突并重新测试代码。
@@ -152,3 +157,11 @@ git push
 * 关联 Issue：如 Fixes #123，让 GitHub/GitLab 自动关闭问题。
 * 不要提交无意义信息：如 "update"、"fix bug" 这样的信息毫无价值。
 * 如果是 WIP（Work in Progress）：可以用 wip: 前缀，但正式合并前应 squash 或改成规范格式。
+
+## 什麼情況下您的代碼將會被拒絕合併
+
+1. 沒有遵循 `./src/README.md` 中的開發規範。
+2. 提供相對獨立的模塊時:
+     1. 沒有提供具有隨機參數的單元測試並通過。
+     2. 沒有提供完善的 `README` 文檔
+3. 將還在開發中的模塊合併，或將還處於 `WIP` 的模塊合併。

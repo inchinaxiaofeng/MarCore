@@ -1,7 +1,7 @@
 BUILD_DIR = ./build
 
 resolve:
-	mill -i __.test.runMain
+	mill -i MarCore.test.runMain
 
 test:
 	mill -i __.test
