@@ -11,201 +11,83 @@ import isa.riscv._
 import top.Settings
 import blackbox._
 
+/** 通用化的 ALU 編碼結構。通過設計 ALU 指令，將ISA與架構實現分離。
+  *
+  * ALU Ctrl 的位寬將會影響流水間寄存器的開銷, 因此要節約位寬,採取了編碼的方式進行.
+  *
+  * 但是爲了避免編碼解碼開銷, 在可以的情況下, 儘量賦予每一個位獨特的意義.
+  *
+  * 考慮到主要的RISC架構中,都將 W 后缀設計爲 64-bit 下的特产，专为处理 legacy 32-bit 数据而设，32 位下無效或不存在.
+  *
+  * 因此, 我們在這裏保持一致, W 後綴只有在 64-bit 下才有意義, 32-bit 下不應該使用
+  *
+  * @note
+  *   不同架構不需要實現全部指令, 僅僅對用到的進行處理即可. 不實現就不會造成面積開銷的浪費.
+  *
+  * @param `[6]`
+  *   Adder sub bit. 加法器控制位, 可以通過這一位判斷當前是加還是減. 當拉高時, 加法器將進行減法.
+  *
+  * @param `[5]`
+  *   Word bit. XLEN == 64 時, 當這一位拉高時，指 Word 數據類型. XLEN == 32時, 這一位被拋棄.
+  *
+  * @param `[4]`
+  *   Unsigned bit. 無符號標誌位. 當這一位拉高時, 對 可拓展原數據 進行0拓展, 否則將會使用符號拓展
+  *
+  * @param `[3,0]`
+  *   Encoded type bit. 編碼後類型, 用於在無法通過其他位分別時, 區分不同指令. 當編碼全爲 0 時用於區分不需要進行匹配
+  */
 object ALUCtrl {
-  /* [6]: Add bit.
-   [5]: Word bit.
-   [4]: Branch unit bit.
-   [3]: Branch inst bit.
-   [2:1]: Branch type bit.
-   [0]: Branch direction invert bit.
-   */
-  //			= "b6543210".U
-  def add = "b1000000".U
-  def sll = "b0000001".U
-  def slt = "b0000010".U
-  def sltu = "b0000011".U
-  def xor = "b0000100".U
-  def srl = "b0000101".U
-  def or = "b0000110".U
-  def and = "b0000111".U
-  def sub = "b0001000".U
-  def sra = "b0001101".U
+  def add = "b000_0000".U
+  def addu = "b001_0000".U
+  def sub = "b100_0000".U
+  def addw = "b010_0000".U
+  def adduw = "b011_0000".U
+  def subw = "b110_0000".U
 
-  def addw = "b1100000".U
-  def subw = "b0101000".U
-  def sllw = "b0100001".U
-  def srlw = "b0100101".U
-  def sraw = "b0101101".U
+  def sll = "b000_0001".U
+  def srl = "b000_0010".U
+  def sra = "b000_0011".U
+  def sllw = "b010_0001".U // CHECK
+  def srlw = "b010_0010".U // CHECK
+  def sraw = "b010_0011".U // CHECK
 
-  def jal = "b1011000".U
-  def jalr = "b1011010".U
-  def beq = "b0010000".U
-  def bne = "b0010001".U
-  def blt = "b0010100".U
-  def bge = "b0010101".U
-  def bltu = "b0010110".U
-  def bgeu = "b0010111".U
+  def slt = "b100_0100".U // 需要比較
+  def sltu = "b101_0100".U // 需要比較
 
-  // For RAS
-  def call = "b1011100".U
-  def ret = "b1011110".U
+  def or = "b000_1000".U
+  def nor = "b000_1001".U
+  def xor = "b000_1010".U
+  def and = "b000_1011".U
 
-  def isAdd(ctrl: UInt) = ctrl(6)
-  def pcPlus2(ctrl: UInt) = ctrl(5)
+  /** 判斷是否是減法. 設計用於傳遞給加法器進行減法
+    *
+    * @param ctrl
+    * @return
+    */
+  def isSub(ctrl: UInt) = ctrl(6)
+
+  /** 用於判斷是否是 Word 類型. 在32位的情況下沒有意義
+    *
+    * @param ctrl
+    * @return
+    */
   def isWordOp(ctrl: UInt) = ctrl(5)
-  def isBru(ctrl: UInt) = ctrl(4)
-  def isBranch(ctrl: UInt) = !ctrl(3)
-  def getBranchType(ctrl: UInt) = ctrl(2, 1)
-  def isBranchInvert(ctrl: UInt) = ctrl(0)
-  def isJump(ctrl: UInt) = isBru(ctrl) && !isBranch(ctrl)
+
+  /** 判斷是否是無符號數
+    *
+    * @param ctrl
+    * @return
+    */
+  def isUnsign(ctrl: UInt) = ctrl(4)
+
+  /** 訪問編碼位
+    *
+    * @param ctrl
+    * @return
+    */
+  def getEncoded(ctrl: UInt) = ctrl(3, 0)
 }
 
 class ALUIO extends FuCtrlIO {
   val cfIn = Flipped(new CtrlFlowIO)
-  val redirect = new RedirectIO
-  val offset = Input(UInt(XLEN.W))
-  val bpuUpdate = new BPUUpdate
-}
-
-class ALU extends MarCoreModule {
-  implicit val moduleName: String = this.name
-  val io = IO(new ALUIO)
-
-  val (valid, srcA, srcB, ctrl) =
-    (io.in.valid, io.in.bits.srcA, io.in.bits.srcB, io.in.bits.ctrl)
-  def access(valid: Bool, srcA: UInt, srcB: UInt, ctrl: UInt): UInt = {
-    this.valid := valid
-    this.srcA := srcA
-    this.srcB := srcB
-    this.ctrl := ctrl
-    io.out.bits
-  }
-
-  val isAddrSub = !ALUCtrl.isAdd(ctrl)
-  val (adderRes, adderCarry) =
-    if (Settings.get("ImplBetterAdder")) {
-      AdderGen(XLEN, srcA, (srcB ^ Fill(XLEN, isAddrSub)), isAddrSub)
-    } else {
-      val newAdderRes = ((srcA +& (srcB ^ Fill(XLEN, isAddrSub))) + isAddrSub)
-      (newAdderRes(XLEN - 1, 0), newAdderRes(XLEN))
-    }
-  val xorRes = srcA ^ srcB
-  val sltu = !adderCarry
-  val slt = xorRes(XLEN - 1) ^ sltu
-
-  val shsrcA = MuxLookup(ctrl, srcA(XLEN - 1, 0))(
-    Seq(
-      ALUCtrl.srlw -> ZeroExt(srcA(31, 0), XLEN),
-      ALUCtrl.sraw -> SignExt(srcA(31, 0), XLEN)
-    )
-  )
-  val shamt = Mux(
-    ALUCtrl.isWordOp(ctrl),
-    srcB(4, 0),
-    if (XLEN == 64) srcB(5, 0) else srcB(4, 0)
-  )
-  val res = MuxLookup(ctrl(3, 0), adderRes)(
-    Seq(
-      ALUCtrl.sll -> ((shsrcA << shamt)(XLEN - 1, 0)),
-      ALUCtrl.slt -> ZeroExt(slt, XLEN),
-      ALUCtrl.sltu -> ZeroExt(sltu, XLEN),
-      ALUCtrl.xor -> xorRes,
-      ALUCtrl.srl -> (shsrcA >> shamt),
-      ALUCtrl.or -> (srcA | srcB),
-      ALUCtrl.and -> (srcA & srcB),
-      ALUCtrl.sra -> ((shsrcA.asSInt >> shamt).asUInt)
-    )
-  )
-  val aluRes = Mux(ALUCtrl.isWordOp(ctrl), SignExt(res(31, 0), 64), res)
-
-  val branchOpTable = List(
-    ALUCtrl.getBranchType(ALUCtrl.beq) -> !xorRes.orR,
-    ALUCtrl.getBranchType(ALUCtrl.blt) -> slt,
-    ALUCtrl.getBranchType(ALUCtrl.bltu) -> sltu
-  )
-
-  val jumpTarget =
-    if (Settings.get("ImplBetterAdder"))
-      AdderGen(XLEN, io.cfIn.pc, io.offset, 0.U)._1
-    else (io.cfIn.pc + io.offset)(XLEN - 1, 0)
-
-  val isBranch = ALUCtrl.isBranch(ctrl)
-  val isBru = ALUCtrl.isBru(ctrl)
-  val taken = LookupTree(ALUCtrl.getBranchType(ctrl), branchOpTable) ^ ALUCtrl
-    .isBranchInvert(ctrl)
-  val target = Mux(isBranch, jumpTarget, adderRes)(VAddrBits - 1, 0)
-//	val predictWrong = Mux(!taken && isBranch, io.cfIn.brIdx(0), !io.cfIn.brIdx(0) || (io.redirect.target =/= io.cfIn.pnpc))
-  val predictWrong = Mux(isBru, io.redirect.target =/= io.cfIn.pnpc, false.B)
-
-  val starget =
-    if (Settings.get("ImplBetterAdder")) AdderGen(XLEN, io.cfIn.pc, 4.U, 0.U)._1
-    else (io.cfIn.pc + 4.U)(XLEN - 1, 0)
-
-  if (Settings.get("TraceALU"))
-    Debug(valid, "[ERROR] pc %x inst %x\n", io.cfIn.pc, io.cfIn.instr)
-  io.redirect.target := Mux(!taken && isBranch, starget, target)
-  // with branch predictor, this is actually to fix the wrong prediction
-  io.redirect.valid := valid && isBru && predictWrong
-
-  val stargetSign =
-    if (Settings.get("ImplBetterAdder"))
-      AdderGen(XLEN, SignExt(io.cfIn.pc, AddrBits), 4.U, 0.U)._1
-    else (SignExt(io.cfIn.pc, AddrBits) + 4.U)(XLEN - 1, 0)
-  val redirectRtype = if (EnableOutOfOrderExec) 1.U else 0.U
-  io.redirect.rtype := redirectRtype
-  // mark redirect type as speculative exec fix
-  // may be can be moved to ISU to calculate pc + 4
-  // this is actually for jal and jalr to write pc + 4/2 to rd
-  io.out.bits := Mux(isBru, stargetSign, aluRes)
-
-  io.in.ready := io.out.ready
-  io.out.valid := valid
-
-  io.bpuUpdate.valid := valid && isBru
-  io.bpuUpdate.pc := io.cfIn.pc
-  io.bpuUpdate.isMissPredict := predictWrong
-  io.bpuUpdate.actualTarget := target
-  io.bpuUpdate.actualTaken := taken
-  io.bpuUpdate.fuCtrl := ctrl
-  io.bpuUpdate.btbType := LookupTree(ctrl, RV32I_BRUInstr.bruCtrl2BtbTypeTable)
-
-  if (Settings.get("Statistic")) {
-    val statistic_bp = Module(new STATISTIC_BP)
-    statistic_bp.io.clk := clock
-    statistic_bp.io.rst := reset
-    statistic_bp.io.predictValid := isBru
-    statistic_bp.io.predictRight := !predictWrong
-  }
-  if (Settings.get("TraceALU")) {
-    Debug(
-      valid && isBru,
-      "tgt %x valid %d npc %x pdwrong %x\n",
-      io.redirect.target,
-      io.redirect.valid,
-      io.cfIn.pnpc,
-      predictWrong
-    )
-    Debug(
-      valid && isBru,
-      "taken %d addrRes %x srcA %x srcB %x ctrl %x\n",
-      taken,
-      adderRes,
-      srcA,
-      srcB,
-      ctrl
-    )
-    Debug(
-      valid && isBru,
-      "[BPW] pc %x tgt %x npc %x pdWrong %x type %x%x%x%x\n",
-      io.cfIn.pc,
-      io.redirect.target,
-      io.cfIn.pnpc,
-      predictWrong,
-      isBranch,
-      (ctrl === ALUCtrl.jal || ctrl === ALUCtrl.call),
-      ctrl === ALUCtrl.jalr,
-      ctrl === ALUCtrl.ret
-    )
-    Debug("valid %d isBru %d isBranch %d\n", valid, isBru, isBranch)
-  }
 }

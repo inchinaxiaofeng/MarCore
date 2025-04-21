@@ -55,7 +55,6 @@ object ALUCtrl {
   def ret = "b1011110".U
 
   def isAdd(ctrl: UInt) = ctrl(6)
-  def pcPlus2(ctrl: UInt) = ctrl(5)
   def isWordOp(ctrl: UInt) = ctrl(5)
   def isBru(ctrl: UInt) = ctrl(4) // Just For Branch
   def isBranch(ctrl: UInt) = !ctrl(3) // Just For Branch

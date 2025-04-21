@@ -12,6 +12,7 @@ object LogLevel extends Enumeration {
   type LogLevel = Value
 
   val ALL = Value(0, "ALL  ")
+  val TRACE = Value("TRACE")
   val DEBUG = Value("DEBUG")
   val INFO = Value("INFO ")
   val WARN = Value("WARN ")
@@ -71,6 +72,7 @@ sealed abstract class LogHelper(val logLevel: LogLevel) {
   }
 }
 
+object Trace extends LogHelper(LogLevel.TRACE)
 object Debug extends LogHelper(LogLevel.DEBUG)
 object Info extends LogHelper(LogLevel.INFO)
 object Warn extends LogHelper(LogLevel.WARN)
