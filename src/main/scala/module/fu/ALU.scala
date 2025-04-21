@@ -88,6 +88,4 @@ object ALUCtrl {
   def getEncoded(ctrl: UInt) = ctrl(3, 0)
 }
 
-class ALUIO extends FuCtrlIO {
-  val cfIn = Flipped(new CtrlFlowIO)
-}
+class ALUIO extends FuCtrlIO {}

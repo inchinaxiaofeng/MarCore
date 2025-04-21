@@ -54,7 +54,4 @@ class LoongArchALU extends MarCoreModule {
   io.out.bits := aluRes
   io.in.ready := io.out.ready
   io.out.valid := valid
-
-  if (Settings.get("TraceALU"))
-    Debug(valid, "[Trace] pc %x inst %x\n", io.cfIn.pc, io.cfIn.instr)
 }

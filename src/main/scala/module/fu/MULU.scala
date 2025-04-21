@@ -1,0 +1,68 @@
+package module.fu.dev
+
+import chisel3._
+import chisel3.util._
+import chisel3.util.experimental.BoringUtils
+
+import defs._
+import utils._
+import top.Settings
+
+/** 通用化的 MULU 編碼結構。通過設計 MULU 指令，將ISA與架構實現分離。
+  *
+  * 考慮到主要的RISC架構中,都將 W 后缀設計爲 64-bit 下的特产，专为处理 legacy 32-bit 数据而设，32 位下無效或不存在.
+  *
+  * 因此, 我們在這裏保持一致, W 後綴只有在 64-bit 下才有意義, 32-bit 下不應該使用
+  *
+  * @note
+  *   不同架構不需要實現全部指令, 僅僅對用到的進行處理即可. 不實現就不會造成面積開銷的浪費.
+  *
+  * @param `[6]`
+  *
+  * @param `[5]`
+  *   Word bit. XLEN == 64 時, 當這一位拉高時，指 Word 數據類型. XLEN == 32時, 這一位被拋棄.
+  *
+  * @param `[4]`
+  *   Unsigned bit. 無符號標誌位. 當這一位拉高時, 對 可拓展原數據 進行0拓展, 否則將會使用符號拓展
+  *
+  * @param `[3,0]`
+  */
+
+object MDUCtrl {
+  /* [4]: None.
+   [3]: Word bit.
+   [2]: Div bit.
+   [1]:
+   [0]: Div sign bit, 0 means signed, 1 means unsigned
+   */
+  //				3210
+  def mul = "b000_0000".U
+  def mulh = "b000_0000".U
+  def mulhsu = "b000_0000".U
+  def mulhu = "b000_0000".U
+
+  def mulw = "b010_0000".U
+
+  def isDiv(op: UInt) = op(2)
+  def isDivSign(op: UInt) = isDiv(op) && !op(0)
+  def isW(op: UInt) = op(3)
+}
+
+class MulDivIO(val len: Int) extends Bundle {
+  val in = Flipped(DecoupledIO(Vec(2, Output(UInt(len.W)))))
+  val sign = Input(Bool())
+  val out = DecoupledIO(Output(UInt((len * 2).W)))
+}
+
+class Multiplier(len: Int) extends MarCoreModule {
+  implicit val moduleName: String = this.name
+  val io = IO(new MulDivIO(len))
+//	val latency = 1
+
+  val mulRes = (io.in.bits(0).asSInt * io.in.bits(1).asSInt).asSInt
+  io.out.bits := mulRes.asUInt
+  io.out.valid := true.B
+  io.in.ready := io.in.valid
+}
+
+class MDUIO extends FuCtrlIO {}
