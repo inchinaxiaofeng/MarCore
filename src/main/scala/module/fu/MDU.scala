@@ -18,7 +18,7 @@ import top.Settings
   *   不同架構不需要實現全部指令, 僅僅對用到的進行處理即可. 不實現就不會造成面積開銷的浪費.
   *
   * @param `[6]`
-  *   Adder sub bit. 加法器控制位, 可以通過這一位判斷當前是加還是減. 當拉高時, 加法器將進行減法.
+  *   . 加法器控制位, 可以通過這一位判斷當前是加還是減. 當拉高時, 加法器將進行減法.
   *
   * @param `[5]`
   *   Word bit. XLEN == 64 時, 當這一位拉高時，指 Word 數據類型. XLEN == 32時, 這一位被拋棄.
@@ -29,7 +29,6 @@ import top.Settings
   * @param `[3,0]`
   *   Encoded type bit. 編碼後類型, 用於在無法通過其他位分別時, 區分不同指令. 當編碼全爲 0 時用於區分不需要進行匹配
   */
-
 object MDUCtrl {
   /* [4]: None.
    [3]: Word bit.
@@ -56,6 +55,12 @@ object MDUCtrl {
   def isDiv(op: UInt) = op(2)
   def isDivSign(op: UInt) = isDiv(op) && !op(0)
   def isW(op: UInt) = op(3)
+}
+
+class MulDivCtrl extends Bundle {
+  val sign = Bool()
+  val isW = Bool()
+  val isHi = Bool() // return hi bits of result ?
 }
 
 class MulDivIO(val len: Int) extends Bundle {
@@ -92,77 +97,3 @@ class Divider(len: Int) extends MarCoreModule {
 }
 
 class MDUIO extends FuCtrlIO {}
-
-class MDU extends MarCoreModule {
-  implicit val moduleName: String = this.name
-  val io = IO(new MDUIO)
-
-  val (valid, srcA, srcB, ctrl) =
-    (io.in.valid, io.in.bits.srcA, io.in.bits.srcB, io.in.bits.ctrl)
-  def access(valid: Bool, srcA: UInt, srcB: UInt, ctrl: UInt): UInt = {
-    this.valid := valid
-    this.srcA := srcA
-    this.srcB := srcB
-    this.ctrl := ctrl
-    io.out.bits
-  }
-
-  val isDiv = MDUCtrl.isDiv(ctrl)
-  val isDivSign = MDUCtrl.isDivSign(ctrl)
-  val isW = MDUCtrl.isW(ctrl)
-
-  val mul = Module(new Multiplier(XLEN + 1))
-  val div = Module(new Divider(XLEN))
-  List(mul.io, div.io).map { case x =>
-    x.sign := isDivSign
-    x.out.ready := io.out.ready
-  }
-
-  val signext = SignExt(_: UInt, XLEN + 1)
-  val zeroext = ZeroExt(_: UInt, XLEN + 1)
-  val mulInputFuncTable = List(
-    MDUCtrl.mul -> (zeroext, zeroext),
-    MDUCtrl.mulh -> (signext, signext),
-    MDUCtrl.mulhsu -> (signext, zeroext),
-    MDUCtrl.mulhu -> (zeroext, zeroext)
-  )
-  mul.io.in.bits(0) := LookupTree(
-    ctrl(1, 0),
-    mulInputFuncTable.map(p => (p._1(1, 0), p._2._1(srcA)))
-  )
-  mul.io.in.bits(1) := LookupTree(
-    ctrl(1, 0),
-    mulInputFuncTable.map(p => (p._1(1, 0), p._2._2(srcB)))
-  )
-
-  val divInputFunc = (x: UInt) =>
-    Mux(
-      isW,
-      Mux(isDivSign, SignExt(x(31, 0), XLEN), ZeroExt(x(31, 0), XLEN)),
-      x
-    )
-  div.io.in.bits(0) := divInputFunc(srcA)
-  div.io.in.bits(1) := divInputFunc(srcB)
-
-  mul.io.in.valid := io.in.valid && !isDiv
-  div.io.in.valid := io.in.valid && isDiv
-
-  val mulRes = Mux(
-    ctrl(1, 0) === MDUCtrl.mul(1, 0),
-    mul.io.out.bits(XLEN - 1, 0),
-    mul.io.out.bits(2 * XLEN - 1, XLEN)
-  )
-  val divRes = Mux(
-    ctrl(1),
-    div.io.out.bits(2 * XLEN - 1, XLEN),
-    div.io.out.bits(XLEN - 1, 0)
-  )
-  val res = Mux(isDiv, divRes, mulRes)
-  io.out.bits := Mux(isW, SignExt(res(31, 0), XLEN), res)
-
-  val isDivReg = Mux(io.in.fire, isDiv, RegNext(isDiv))
-  io.in.ready := Mux(isDiv, div.io.in.ready, mul.io.in.ready)
-  io.out.valid := Mux(isDivReg, div.io.out.valid, mul.io.out.valid)
-
-//	BoringUtils.addSource(WireInit(mul.io.out.fire), "perfCntCondMmulInstr")
-}

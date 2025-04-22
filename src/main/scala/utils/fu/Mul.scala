@@ -6,7 +6,6 @@ import utils._
 import utils.fu.{C22, C32, C53}
 
 /** `MulDivCtrl` 是一个控制信息打包结构，通常用于乘除法模块的配置信号。
-  *
   *   - `sign`：表示当前乘法是否为有符号运算。
   *   - `isW`：标记操作是否为 Word 类型（即 32-bit 而非全宽 64-bit）。
   *   - `isHi`：是否返回结果的高位部分（例如，在 hi/lo 分离的乘法中返回 hi 部分）。
@@ -20,13 +19,69 @@ class MulDivCtrl extends Bundle {
 /** `ArrayMulDataModule` 实现了一个基于 Booth 编码与 CSA 压缩树的乘法器核心逻辑模块。
   *
   * 模块支持部分积生成、压缩、最终求和操作。其设计重点包括：
-  *
   *   - 使用 Booth 编码（2-bit 每次扫描，形成 3-bit 窗口）生成部分积。
   *   - 使用 Carry-Save Adder（CSA）树进行多位压缩，降低加法层数。
   *   - 使用可配置的时序寄存器（regEnables）控制流水级寄存逻辑。
   *
   * @param len
   *   操作数位宽
+  *
+  * @example
+  *   {{{
+  *       package example
+  *
+  *       import chisel3._
+  *       import chisel3.util._
+  *       import utils.fu.ArrayMulDataModule
+  *
+  *       class MulUnit(len: Int) extends Module {
+  *         val io = IO(new Bundle {
+  *           val a      = Input(UInt(len.W))
+  *           val b      = Input(UInt(len.W))
+  *           val valid  = Input(Bool())              // 啟動信號
+  *           val result = Output(UInt((2 * len).W))  // 乘法結果
+  *           val outValid = Output(Bool())           // 結果是否有效
+  *         })
+  *
+  *         // --- internal pipeline control ---
+  *         val pipeS0 = RegInit(false.B)
+  *         val pipeS1 = RegInit(false.B)
+  *         val pipeS2 = RegInit(false.B) // 最後輸出準備好
+  *
+  *         // pipeline push: 啟動時進入 pipeline
+  *         when (io.valid) {
+  *           pipeS0 := true.B
+  *         }.elsewhen(pipeS0) {
+  *           pipeS0 := false.B
+  *         }
+  *
+  *         when (pipeS0) {
+  *           pipeS1 := true.B
+  *         }.elsewhen(pipeS1) {
+  *           pipeS1 := false.B
+  *         }
+  *
+  *         when (pipeS1) {
+  *           pipeS2 := true.B
+  *         }.elsewhen(pipeS2) {
+  *           pipeS2 := false.B
+  *         }
+  *
+  *         // instantiate multiplier core
+  *         val mulCore = Module(new ArrayMulDataModule(len))
+  *         mulCore.io.a := io.a
+  *         mulCore.io.b := io.b
+  *
+  *         // 驅動內部 pipeline 使能（這裡你完全掌控）
+  *         mulCore.io.regEnables(0) := pipeS0
+  *         mulCore.io.regEnables(1) := pipeS1
+  *
+  *         // 接出結果
+  *         io.result := mulCore.io.result
+  *         io.outValid := pipeS2
+  *       }
+  *
+  *   }}}
   *
   * ---
   *
@@ -85,9 +140,9 @@ class MulDivCtrl extends Bundle {
   *
   * ## 📊 每級最大 Tg 預估（假設 len=64）
   *
-  * 總估計 delay（不 pipeline 情況下）：17~19 Tg 而實際 pipeline 切到兩級，因此：
-  *   - S0+S1 ≈ 6~7 Tg（前兩級）
-  *   - S2+S3 ≈ 10~12 Tg（你可能會 timing fail）
+  * 總估計 delay（不 pipeline 情況下）：17\~19 Tg 而實際 pipeline 切到兩級，因此：
+  *   - S0+S1 ≈ 6\~7 Tg（前兩級）
+  *   - S2+S3 ≈ 10\~12 Tg（你可能會 timing fail）
   */
 class ArrayMulDataModule(len: Int) extends Module {
   val io = IO(new Bundle() {

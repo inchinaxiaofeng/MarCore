@@ -41,7 +41,7 @@ object ALUCtrl {
   def addu = "b001_0000".U
   def sub = "b100_0000".U
   def addw = "b010_0000".U
-  def adduw = "b011_0000".U
+  def addwu = "b011_0000".U
   def subw = "b110_0000".U
 
   def sll = "b000_0001".U

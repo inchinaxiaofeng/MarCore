@@ -36,17 +36,17 @@ class LoongArchALU extends MarCoreModule {
   val shamt = srcB(4, 0)
   val res = MuxLookup(ALUCtrl.getEncoded(ctrl), adderRes)(
     Seq(
-      ALUCtrl.sll -> ((srcA << shamt)(XLEN - 1, 0)),
-      ALUCtrl.srl -> (srcA >> shamt),
-      ALUCtrl.sra -> ((srcA.asSInt >> shamt).asUInt),
-      //
-      ALUCtrl.slt -> ZeroExt(slt, XLEN), // 對 Bool 值進行0拓展
-      ALUCtrl.sltu -> ZeroExt(sltu, XLEN), // 對 Bool 值進行0拓展
-      //
-      ALUCtrl.or -> orRes,
-      ALUCtrl.and -> andRes,
-      ALUCtrl.nor -> norRes,
-      ALUCtrl.xor -> xorRes
+      ALUCtrl.getEncoded(ALUCtrl.sll) -> ((srcA << shamt)(XLEN - 1, 0)),
+      ALUCtrl.getEncoded(ALUCtrl.srl) -> (srcA >> shamt),
+      ALUCtrl.getEncoded(ALUCtrl.sra) -> ((srcA.asSInt >> shamt).asUInt),
+//
+      ALUCtrl.getEncoded(ALUCtrl.slt) -> ZeroExt(slt, XLEN), // 對 Bool 值進行0拓展
+      ALUCtrl.getEncoded(ALUCtrl.sltu) -> ZeroExt(sltu, XLEN), // 對 Bool 值進行0拓展
+//
+      ALUCtrl.getEncoded(ALUCtrl.or) -> orRes,
+      ALUCtrl.getEncoded(ALUCtrl.and) -> andRes,
+      ALUCtrl.getEncoded(ALUCtrl.nor) -> norRes,
+      ALUCtrl.getEncoded(ALUCtrl.xor) -> xorRes
     )
   )
   val aluRes = res

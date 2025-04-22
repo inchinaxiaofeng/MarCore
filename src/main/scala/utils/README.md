@@ -12,3 +12,5 @@
 
 除了 `./difftest/` 之外，所有的內容都適配與任何 RISC 架構芯片。
 `./difftest/` 中是一個臨時目錄，用於存放 `difftest` 相關內容。
+
+Matrix 和 MatrixSRAMTemplate 處於Dev狀態, 不要使用.
