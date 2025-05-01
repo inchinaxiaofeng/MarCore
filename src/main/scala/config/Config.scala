@@ -1,7 +1,6 @@
 package config
 
 import scala.annotation.meta.field
-import config.ISA.{LoongArch => LoongArch}
 
 /** 用於選擇架構寬度。
   *

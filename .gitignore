@@ -5,3 +5,4 @@
 out
 .bloop
 build
+.hdl_checker

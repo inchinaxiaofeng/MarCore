@@ -1,4 +1,4 @@
-package module.fu.dev
+package module.fu
 
 import chisel3._
 import chisel3.util._
@@ -46,9 +46,32 @@ object MulUCtrl {
 
   def mulhsu = "b1001_000".U
 
+  /** 高位輸出使能位
+    *
+    * @param ctrl
+    * @return
+    */
   def isHigh(ctrl: UInt) = ctrl(6)
+
+  /** Word Bit 拓展使能位
+    *
+    * @param ctrl
+    * @return
+    */
   def isW(ctrl: UInt) = ctrl(5)
+
+  /** SrcA 0 拓展使能位
+    *
+    * @param ctrl
+    * @return
+    */
   def isAzero(ctrl: UInt) = ctrl(4)
+
+  /** SrcB 0 拓展使能位
+    *
+    * @param ctrl
+    * @return
+    */
   def isBzero(ctrl: UInt) = ctrl(3)
 }
 

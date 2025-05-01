@@ -228,7 +228,7 @@ class BPU_embedded extends MarCoreModule {
   val cphtAddrReq = btbAddr.getIdx(reqLatch.pc)
   val cphtGlobalReq = cpht.read(cphtAddrReq)(1)
 
-  when(reqLatch.valid && ALUCtrl.isBranch(reqLatch.fuCtrl)) {
+  when(reqLatch.valid && BRUCtrl.isBranch(reqLatch.fuCtrl)) {
     val taken = reqLatch.actualTaken
     val newCnt = Mux(taken, cnt + 1.U, cnt - 1.U)
     val newCphtCnt = Mux(
@@ -262,10 +262,10 @@ class BPU_embedded extends MarCoreModule {
     }
   }
   when(io.bpuUpdate.valid) {
-    when(io.bpuUpdate.fuCtrl === ALUCtrl.call) {
+    when(io.bpuUpdate.fuCtrl === BRUCtrl.call) {
       ras.write(sp.value + 1.U, io.bpuUpdate.pc + 4.U)
       sp.value := sp.value + 1.U
-    }.elsewhen(io.bpuUpdate.fuCtrl === ALUCtrl.ret) {
+    }.elsewhen(io.bpuUpdate.fuCtrl === BRUCtrl.ret) {
       sp.value := sp.value - 1.U
     }
   }
@@ -425,7 +425,7 @@ class BPU_inorder extends MarCoreModule {
     Cat(btbAddr.getIdx(reqLatch.pc), ghr.read(btbAddr.getIdx(reqLatch.pc)))
   val cphtAddrReq = btbAddr.getIdx(reqLatch.pc)
 
-  when(reqLatch.valid && ALUCtrl.isBranch(reqLatch.fuCtrl)) {
+  when(reqLatch.valid && BRUCtrl.isBranch(reqLatch.fuCtrl)) {
     val taken = reqLatch.actualTaken
     val newCnt = Mux(taken, cnt + 1.U, cnt - 1.U)
     cpht.write(btbIdxReq, 1.U)
@@ -449,13 +449,13 @@ class BPU_inorder extends MarCoreModule {
 //	val rasWdata = Mux(rasResetState, 0.U, req.pc = Mux(io.bpuUpdate.isRVC, 2.U, 4.U))
   val rasWdata = Mux(rasResetState, 0.U, io.bpuUpdate.pc + 4.U)
   val rasWen =
-    rasResetState || (io.bpuUpdate.valid && (io.bpuUpdate.valid && (io.bpuUpdate.fuCtrl === ALUCtrl.call)))
+    rasResetState || (io.bpuUpdate.valid && (io.bpuUpdate.valid && (io.bpuUpdate.fuCtrl === BRUCtrl.call)))
   when(rasWen) { ras.write(rasIdx, rasWdata) }
   when(io.bpuUpdate.valid) {
-    when(io.bpuUpdate.fuCtrl === ALUCtrl.call) {
+    when(io.bpuUpdate.fuCtrl === BRUCtrl.call) {
       //		ras.write(sp.value + 1.U, io.bpuUpdate.pc + 4.U)
       sp.value := sp.value + 1.U
-    }.elsewhen(io.bpuUpdate.fuCtrl === ALUCtrl.ret) {
+    }.elsewhen(io.bpuUpdate.fuCtrl === BRUCtrl.ret) {
       sp.value := sp.value - 1.U
     }
   }

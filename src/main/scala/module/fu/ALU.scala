@@ -47,17 +47,17 @@ object ALUCtrl {
   def sll = "b000_0001".U
   def srl = "b000_0010".U
   def sra = "b000_0011".U
-  def sllw = "b010_0001".U // CHECK
-  def srlw = "b010_0010".U // CHECK
-  def sraw = "b010_0011".U // CHECK
+  def sllw = "b010_0100".U
+  def srlw = "b010_0101".U
+  def sraw = "b010_0110".U
 
-  def slt = "b100_0100".U // 需要比較
-  def sltu = "b101_0100".U // 需要比較
+  def slt = "b100_0111".U // 需要比較
+  def sltu = "b101_1000".U // 需要比較
 
-  def or = "b000_1000".U
-  def nor = "b000_1001".U
-  def xor = "b000_1010".U
-  def and = "b000_1011".U
+  def or = "b000_1001".U
+  def nor = "b000_1010".U
+  def xor = "b000_1011".U
+  def and = "b000_1100".U
 
   /** 判斷是否是減法. 設計用於傳遞給加法器進行減法
     *
@@ -71,7 +71,7 @@ object ALUCtrl {
     * @param ctrl
     * @return
     */
-  def isWordOp(ctrl: UInt) = ctrl(5)
+  def isWord(ctrl: UInt) = ctrl(5)
 
   /** 判斷是否是無符號數
     *
@@ -89,3 +89,62 @@ object ALUCtrl {
 }
 
 class ALUIO extends FuCtrlIO {}
+
+class ALU extends MarCoreModule {
+  implicit val moduleName: String = this.name
+  val io = IO(new ALUIO)
+
+  val (valid, srcA, srcB, ctrl) =
+    (io.in.valid, io.in.bits.srcA, io.in.bits.srcB, io.in.bits.ctrl)
+  def access(valid: Bool, srcA: UInt, srcB: UInt, ctrl: UInt): UInt = {
+    this.valid := valid
+    this.srcA := srcA
+    this.srcB := srcB
+    this.ctrl := ctrl
+    io.out.bits
+  }
+
+  val isAddrSub = ALUCtrl.isSub(ctrl)
+  val (adderRes, adderCarry) =
+    AdderGen(XLEN, srcA, (srcB ^ Fill(XLEN, isAddrSub)), isAddrSub)
+
+  val xorRes = srcA ^ srcB
+  val andRes = srcA & srcB
+  val orRes = srcA | srcB
+  val norRes = !orRes
+
+  val sltu = !adderCarry
+  val slt = xorRes(XLEN - 1) ^ sltu
+
+  val shsrcA = MuxLookup(ALUCtrl.getEncoded(ctrl), srcA(XLEN - 1, 0))(
+    Seq(
+      ALUCtrl.getEncoded(ALUCtrl.srlw) -> ZeroExt(srcA(31, 0), XLEN),
+      ALUCtrl.getEncoded(ALUCtrl.sraw) -> SignExt(srcA(31, 0), XLEN)
+    )
+  )
+
+  val shamt = Mux(
+    ALUCtrl.isWord(ctrl),
+    srcB(4, 0),
+    if (XLEN == 64) srcB(5, 0) else srcB(4, 0)
+  )
+  val res = MuxLookup(ALUCtrl.getEncoded(ctrl), adderRes)(
+    Seq(
+      ALUCtrl.getEncoded(ALUCtrl.sll) -> ((shsrcA << shamt)(XLEN - 1, 0)),
+      ALUCtrl.getEncoded(ALUCtrl.srl) -> (shsrcA >> shamt),
+      ALUCtrl.getEncoded(ALUCtrl.sra) -> ((shsrcA.asSInt >> shamt).asUInt),
+//
+      ALUCtrl.getEncoded(ALUCtrl.slt) -> ZeroExt(slt, XLEN), // 對 Bool 值進行0拓展
+      ALUCtrl.getEncoded(ALUCtrl.sltu) -> ZeroExt(sltu, XLEN), // 對 Bool 值進行0拓展
+//
+      ALUCtrl.getEncoded(ALUCtrl.or) -> orRes,
+      ALUCtrl.getEncoded(ALUCtrl.and) -> andRes,
+      ALUCtrl.getEncoded(ALUCtrl.nor) -> norRes,
+      ALUCtrl.getEncoded(ALUCtrl.xor) -> xorRes
+    )
+  )
+
+  io.out.bits := res
+  io.in.ready := io.out.ready
+  io.out.valid := valid
+}

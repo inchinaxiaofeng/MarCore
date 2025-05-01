@@ -1,30 +1,30 @@
-//package isa.loongarch
+// package isa.loongarch
 //
-//import chisel3._
-//import chisel3.util._
+// import chisel3._
+// import chisel3.util._
 //
-//import defs._
-//import utils._
+// import defs._
+// import utils._
 //
-//object LA32R_CSRAccessInstr extends HasInstrType {
-//	def CSRRD		= BitPat("00_00010_0????_?????_?????_00000_?????")
-//	def CSRWR		= BitPat("00_00010_0????_?????_?????_00001_?????")
-//	def CSRXCHG		= BitPat("00_00010_0????_?????_?????_?????_?????") // rj != 0,1
+// object LA32R_CSRAccessInstr extends HasInstrType {
+// 	def CSRRD		= BitPat("00_00010_0????_?????_?????_00000_?????")
+// 	def CSRWR		= BitPat("00_00010_0????_?????_?????_00001_?????")
+// 	def CSRXCHG		= BitPat("00_00010_0????_?????_?????_?????_?????") // rj != 0,1
 //
-//	val table = Array (
-//		CSRRD	-> List(Instr2R, FuType.csr, CSRCtrl.)
-//	)
-//}
+// 	val table = Array (
+// 		CSRRD	-> List(Instr2R, FuType.csr, CSRCtrl.)
+// 	)
+// }
 //
-//object LA32R_CacheInstr extends HasInstrType {
-//	def CACOP		= BitPat("00_00011_000??_?????_?????_?????_?????")
-//}
+// object LA32R_CacheInstr extends HasInstrType {
+// 	def CACOP		= BitPat("00_00011_000??_?????_?????_?????_?????")
+// }
 //
-//object LA32R_TLBInstr extends HasInstrType {
-//	def TLBSRCH		= BitPat("00_00011_00100_10000_01010_00000_00000")
-//	def TLBRD		= BitPat("00_00011_00100_10000_01011_00000_00000")
-//	def TLBWR		= BitPat("00_00011_00100_10000_01100_00000_00000")
-//	def TLBFILL		= BitPat("00_00011_00100_10000_01101_00000_00000")
-//	def INVTLB		= BitPat("00_00011_00100_10011_?????_?????_?????")
-//}
-
+// object LA32R_TLBInstr extends HasInstrType {
+// 	def TLBSRCH		= BitPat("00_00011_00100_10000_01010_00000_00000")
+// 	def TLBRD		= BitPat("00_00011_00100_10000_01011_00000_00000")
+// 	def TLBWR		= BitPat("00_00011_00100_10000_01100_00000_00000")
+// 	def TLBFILL		= BitPat("00_00011_00100_10000_01101_00000_00000")
+// 	def INVTLB		= BitPat("00_00011_00100_10011_?????_?????_?????")
+// }
+//

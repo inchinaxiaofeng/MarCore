@@ -6,9 +6,10 @@ import chisel3.util._
 import defs._
 import module.fu.ALUCtrl
 import module.fu.LSUCtrl
-import module.fu.MDUCtrl
 import module.fu.BRUCtrl
 import module.fu.BTBtype
+import module.fu.MulUCtrl
+import module.fu.DivUCtrl
 
 object LA32R_ArithInstr extends HasLA32R_InstrType {
   def ADDW = BitPat("00_00000_00001_00000_?????_?????_?????")
@@ -36,37 +37,39 @@ object LA32R_ArithInstr extends HasLA32R_InstrType {
   def MODWU = BitPat("00_00000_00010_00011_?????_?????_?????")
 
   val table = Array(
-    ADDW -> List(Instr3R, FuType.alu, ALUCtrl.add),
-    SUBW -> List(Instr3R, FuType.alu, ALUCtrl.sub),
-    ADDIW -> List(Instr2RI12, FuType.alu, ALUCtrl.addw),
+    ADDW -> List(DJK, FuType.alu, ALUCtrl.add),
+    SUBW -> List(DJK, FuType.alu, ALUCtrl.sub),
+    ADDIW -> List(DJSk12, FuType.alu, ALUCtrl.addw),
     LU12IW -> List(
-      Instr1RI20,
+      DSj20,
       FuType.alu,
       ALUCtrl.add
     ), // GR[rd] = SignExtend({si20, 12'b0}, GRLEN)
-    SLT -> List(Instr3R, FuType.alu, ALUCtrl.slt),
-    SLTU -> List(Instr3R, FuType.alu, ALUCtrl.sltu),
-    SLTI -> List(Instr2RI12, FuType.alu, ALUCtrl.slt),
-    SLTUI -> List(Instr2RI12, FuType.alu, ALUCtrl.sltu),
+    SLT -> List(DJK, FuType.alu, ALUCtrl.slt),
+    SLTU -> List(DJK, FuType.alu, ALUCtrl.sltu),
+    SLTI -> List(DJSk12, FuType.alu, ALUCtrl.slt),
+    SLTUI -> List(DJSk12, FuType.alu, ALUCtrl.sltu),
     PCADDU12I -> List(
-      Instr1RI20,
+      DSj20,
       FuType.alu,
       ALUCtrl.add
     ), // GR[rd] = PC + SignExtend({si20, 12'b0}, GRLEN)
-    AND -> List(Instr3R, FuType.alu, ALUCtrl.and),
-    OR -> List(Instr3R, FuType.alu, ALUCtrl.or),
-    NOR -> List(Instr3R, FuType.alu, ALUCtrl.nor), // FIXME
-    XOR -> List(Instr3R, FuType.alu, ALUCtrl.xor),
-    ANDI -> List(Instr2RI12, FuType.alu, ALUCtrl.and),
-    ORI -> List(Instr2RI12, FuType.alu, ALUCtrl.or),
-    XORI -> List(Instr2RI12, FuType.alu, ALUCtrl.xor),
-    MULW -> List(Instr3R, FuType.mdu, MDUCtrl.mul),
-    MULHW -> List(Instr3R, FuType.mdu, MDUCtrl.mulh),
-    MULHWU -> List(Instr3R, FuType.mdu, MDUCtrl.mulhu),
-    DIVW -> List(Instr3R, FuType.mdu, MDUCtrl.divw),
-    DIVWU -> List(Instr3R, FuType.mdu, MDUCtrl.divuw),
-    MODW -> List(Instr3R, FuType.mdu, MDUCtrl.remw),
-    MODWU -> List(Instr3R, FuType.mdu, MDUCtrl.remuw)
+    AND -> List(DJK, FuType.alu, ALUCtrl.and),
+    OR -> List(DJK, FuType.alu, ALUCtrl.or),
+    NOR -> List(DJK, FuType.alu, ALUCtrl.nor),
+    XOR -> List(DJK, FuType.alu, ALUCtrl.xor),
+    ANDI -> List(DJUk12, FuType.alu, ALUCtrl.and),
+    ORI -> List(DJUk12, FuType.alu, ALUCtrl.or),
+    XORI -> List(DJUk12, FuType.alu, ALUCtrl.xor),
+//
+    MULW -> List(DJK, FuType.mulu, MulUCtrl.mul),
+    MULHW -> List(DJK, FuType.mulu, MulUCtrl.mulh),
+    MULHWU -> List(DJK, FuType.mulu, MulUCtrl.mulhu),
+//
+    DIVW -> List(DJK, FuType.divu, DivUCtrl.divw),
+    DIVWU -> List(DJK, FuType.divu, DivUCtrl.divuw),
+    MODW -> List(DJK, FuType.divu, DivUCtrl.remw),
+    MODWU -> List(DJK, FuType.divu, DivUCtrl.remuw)
   )
 }
 
@@ -79,12 +82,12 @@ object LA32R_ShiftInstr extends HasLA32R_InstrType {
   def SRAIW = BitPat("00_00000_00100_10001_?????_?????_?????")
 
   val table = Array(
-    SLLW -> List(Instr3R, FuType.alu, ALUCtrl.sllw),
-    SRLW -> List(Instr3R, FuType.alu, ALUCtrl.srlw),
-    SRAW -> List(Instr3R, FuType.alu, ALUCtrl.sraw),
-    SLLIW -> List(Instr2RI5, FuType.alu, ALUCtrl.sllw),
-    SRLIW -> List(Instr2RI5, FuType.alu, ALUCtrl.srlw),
-    SRAIW -> List(Instr2RI5, FuType.alu, ALUCtrl.sraw)
+    SLLW -> List(DJK, FuType.alu, ALUCtrl.sllw),
+    SRLW -> List(DJK, FuType.alu, ALUCtrl.srlw),
+    SRAW -> List(DJK, FuType.alu, ALUCtrl.sraw),
+    SLLIW -> List(DJUk5, FuType.alu, ALUCtrl.sllw),
+    SRLIW -> List(DJUk5, FuType.alu, ALUCtrl.srlw),
+    SRAIW -> List(DJUk5, FuType.alu, ALUCtrl.sraw)
   )
 }
 
@@ -100,15 +103,15 @@ object LA32R_JumpInstr extends HasLA32R_InstrType {
   def JIRL = BitPat("01_0011?_?????_?????_?????_?????_?????")
 
   val table = Array(
-    BEQ -> List(Instr2RI16, FuType.bru, BRUCtrl.beq),
-    BNE -> List(Instr2RI16, FuType.bru, BRUCtrl.bne),
-    BLT -> List(Instr2RI16, FuType.bru, BRUCtrl.blt),
-    BGE -> List(Instr2RI16, FuType.bru, BRUCtrl.bge),
-    BLTU -> List(Instr2RI16, FuType.bru, BRUCtrl.bltu),
-    BGEU -> List(Instr2RI16, FuType.bru, BRUCtrl.bgeu),
-    B -> List(InstrI26, FuType.bru, BRUCtrl.jalr), // RD Fixed to r1
-    BL -> List(InstrI26, FuType.bru, BRUCtrl.jal),
-    JIRL -> List(Instr2RI16, FuType.bru, BRUCtrl.jalr)
+    BEQ -> List(DJSk16, FuType.bru, BRUCtrl.beq),
+    BNE -> List(DJSk16, FuType.bru, BRUCtrl.bne),
+    BLT -> List(DJSk16, FuType.bru, BRUCtrl.blt),
+    BGE -> List(DJSk16, FuType.bru, BRUCtrl.bge),
+    BLTU -> List(DJSk16, FuType.bru, BRUCtrl.bltu),
+    BGEU -> List(DJSk16, FuType.bru, BRUCtrl.bgeu),
+    B -> List(Sd10k16, FuType.bru, BRUCtrl.j), // RD Fixed to r1
+    BL -> List(Sd10k16, FuType.bru, BRUCtrl.jal),
+    JIRL -> List(DJSk16, FuType.bru, BRUCtrl.jalr)
   )
 
   val bruCtrl2BtbTypeTable = List(
@@ -136,15 +139,15 @@ object LA32R_AccessInstr extends HasLA32R_InstrType {
   def PRELD = BitPat("00_10101_011??_?????_?????_?????_?????")
 
   val table = Array(
-    LDB -> List(Instr2RI12, FuType.lsu, LSUCtrl.lb),
-    LDH -> List(Instr2RI12, FuType.lsu, LSUCtrl.lh),
-    LDW -> List(Instr2RI12, FuType.lsu, LSUCtrl.lw),
-    LDBU -> List(Instr2RI12, FuType.lsu, LSUCtrl.lbu),
-    LDHU -> List(Instr2RI12, FuType.lsu, LSUCtrl.lhu),
-    STB -> List(Instr2RI12S, FuType.lsu, LSUCtrl.sb),
-    STH -> List(Instr2RI12S, FuType.lsu, LSUCtrl.sh),
-    STW -> List(Instr2RI12S, FuType.lsu, LSUCtrl.sw),
-    PRELD -> List(InstrPreld, FuType.lsu, LSUCtrl.preld) // FIXME: maybe
+    LDB -> List(DJSk12, FuType.lsu, LSUCtrl.lb),
+    LDH -> List(DJSk12, FuType.lsu, LSUCtrl.lh),
+    LDW -> List(DJSk12, FuType.lsu, LSUCtrl.lw),
+    LDBU -> List(DJSk12, FuType.lsu, LSUCtrl.lbu),
+    LDHU -> List(DJSk12, FuType.lsu, LSUCtrl.lhu),
+    STB -> List(DJSk12, FuType.lsu, LSUCtrl.sb),
+    STH -> List(DJSk12, FuType.lsu, LSUCtrl.sh),
+    STW -> List(DJSk12, FuType.lsu, LSUCtrl.sw),
+    PRELD -> List(JUd5Sk12, FuType.lsu, LSUCtrl.preld)
   )
 }
 
@@ -164,26 +167,26 @@ object LA32R_BarrierInstr extends HasLA32R_InstrType {
   def IBAR = BitPat("00_11100_00111_00101_?????_?????_?????")
 
   val table = Array(
-    DBAR -> List(DBAR, FuType.lsu, LSUCtrl.preld), // Bobble
-    IBAR -> List(IBAR, FuType.lsu, LSUCtrl.preld) // Bobble
+    DBAR -> List(Ud15, FuType.lsu, LSUCtrl.preld), // Bobble
+    IBAR -> List(Ud15, FuType.lsu, LSUCtrl.preld) // Bobble
   )
 }
 
-//object LA32R_OtherInstr extends HasLA32R_InstrType {
-//	def SYSCALL		= BitPat("00_00000_00010_10110_?????_?????_?????")
-//	def BREAK		= BitPat("00_00000_00010_10100_?????_?????_?????")
-//	def RDCNTVLW	= BitPat("00_00000_00000_00000_11000_00000_?????")
-//	def RDCNTVHW	= BitPat("00_00000_00000_00000_11001_00000_?????")
-//	def RDCNTID		= BitPat("00_00000_00000_00000_11000_?????_00000")
+// object LA32R_OtherInstr extends HasLA32R_InstrType {
+//   def SYSCALL = BitPat("00_00000_00010_10110_?????_?????_?????")
+//   def BREAK = BitPat("00_00000_00010_10100_?????_?????_?????")
+//   def RDCNTVLW = BitPat("00_00000_00000_00000_11000_00000_?????")
+//   def RDCNTVHW = BitPat("00_00000_00000_00000_11001_00000_?????")
+//   def RDCNTID = BitPat("00_00000_00000_00000_11000_?????_00000")
 //
-//	val table	= Array (
-//		SYSCALL		-> List(Instr)
-//		BREAK		-> List()
-//		RDCNTVLW	-> List()
-//		RDCNTVHW	-> List()
-//		RDCNTID		-> List()
-//	)
-//}
+//   val table = Array(
+//     SYSCALL -> List(),
+//     BREAK -> List(),
+//     RDCNTVLW -> List(),
+//     RDCNTVHW -> List(),
+//     RDCNTID -> List()
+//   )
+// }
 
 object LA_Base extends HasMarCoreParameter {
   val table =

@@ -9,6 +9,7 @@ import module.fu._
 import module.cache._
 import bus.cacheBus._
 import top.Settings
+import scribe.ANSI.ctrl
 
 class EXU(implicit val p: MarCoreConfig) extends MarCoreModule {
   implicit val moduleName: String = this.name
@@ -18,12 +19,11 @@ class EXU(implicit val p: MarCoreConfig) extends MarCoreModule {
     val flush = Input(Bool())
     val dmem = new CacheBus
     val forward = new ForwardIO
-//		val memMMU = Flipped(new MemMMUIO)
+    val bpuUpdate = new BPUUpdate
     val csr =
       if (Settings.get("EnableDifftest") && Settings.get("DiffTestCSR"))
         Some(new RegsDiffIO(num = 4))
       else None
-    val bpuUpdate = new BPUUpdate
   })
 
   val srcA = io.in.bits.data.srcA(XLEN - 1, 0)
@@ -44,13 +44,20 @@ class EXU(implicit val p: MarCoreConfig) extends MarCoreModule {
     srcB = srcB,
     ctrl = fuCtrl
   )
-  alu.io.cfIn := io.in.bits.cf
-  alu.io.offset := io.in.bits.data.imm
   alu.io.out.ready := true.B
 
-  io.bpuUpdate <> alu.io.bpuUpdate
-
-  def isBru(ctrl: UInt) = ctrl(4)
+  /* BRU, Done */
+  val bru = Module(new BRU)
+  val bruOut = bru.access(
+    valid = fuValids(FuType.bru),
+    srcA = srcA,
+    srcB = srcB,
+    ctrl = fuCtrl
+  )
+  bru.io.cfIn := io.in.bits.cf
+  bru.io.imm := io.in.bits.data.imm
+  bru.io.out.ready := true.B
+  io.bpuUpdate <> bru.io.bpuUpdate
 
   /* LSU */
   val lsu = Module(new UnpipelinedLSU)
@@ -67,15 +74,25 @@ class EXU(implicit val p: MarCoreConfig) extends MarCoreModule {
   io.dmem <> lsu.io.dmem
   lsu.io.out.ready := true.B
 
-  /* MDU, Done */
-  val mdu = Module(new MDU)
-  val mduOut = mdu.access(
-    valid = fuValids(FuType.mdu),
+  /* MulU, Done */
+  val mulu = Module(new MulU)
+  val muluOut = mulu.access(
+    valid = fuValids(FuType.mulu),
     srcA = srcA,
     srcB = srcB,
     ctrl = fuCtrl
   )
-  mdu.io.out.ready := true.B
+  mulu.io.out.ready := true.B
+
+  /* DivU, Done */
+  val divu = Module(new DivU)
+  val divuOut = divu.access(
+    valid = fuValids(FuType.divu),
+    srcA = srcA,
+    srcB = srcB,
+    ctrl = fuCtrl
+  )
+  divu.io.out.ready := true.B
 
   /* CSR, Done*/
   val csr = Module(new CSR)
@@ -113,40 +130,45 @@ class EXU(implicit val p: MarCoreConfig) extends MarCoreModule {
   io.out.bits.decode.cf.runahead_checkpoint_id := io.in.bits.cf.runahead_checkpoint_id
   io.out.bits.decode.cf.isBranch := io.in.bits.cf.isBranch
   io.out.bits.decode.cf.redirect :=
-    Mux(csr.io.redirect.valid, csr.io.redirect, alu.io.redirect)
+    Mux(csr.io.redirect.valid, csr.io.redirect, bru.io.redirect)
 
   if (Settings.get("TraceBasicInfo"))
     Debug(
-      csr.io.redirect.valid || alu.io.redirect.valid,
+      csr.io.redirect.valid || bru.io.redirect.valid,
       "[REDIRECT] flush: %d csr (%b,%x) alu (%b,%x)\n",
       io.flush,
       csr.io.redirect.valid,
       csr.io.redirect.target,
-      alu.io.redirect.valid,
-      alu.io.redirect.target
+      bru.io.redirect.valid,
+      bru.io.redirect.target
     )
 
   io.out.valid := io.in.valid && MuxLookup(fuType, true.B)(
     List(
       FuType.lsu -> lsu.io.out.valid,
-      FuType.mdu -> mdu.io.out.valid
+      FuType.mulu -> mulu.io.out.valid,
+      FuType.divu -> divu.io.out.valid
     )
   )
 
   io.out.bits.commits(FuType.alu) := aluOut
+  io.out.bits.commits(FuType.bru) := bruOut
   io.out.bits.commits(FuType.lsu) := lsuOut
-  io.out.bits.commits(FuType.mdu) := mduOut
+  io.out.bits.commits(FuType.mulu) := muluOut
+  io.out.bits.commits(FuType.divu) := divuOut
   io.out.bits.commits(FuType.csr) := csrOut
   io.out.bits.commits(FuType.mou) := 0.U
 
   if (Settings.get("TraceBasicInfo"))
     Debug(
       io.out.fire,
-      "[FIRE] FuType %x alu %x lsu %x mdu %x csr %x\n",
+      "[FIRE] FuType %x alu %x bru %x lsu %x mulu %x divu %x csr %x\n",
       io.in.bits.ctrl.fuType,
       aluOut,
+      bruOut,
       lsuOut,
-      mduOut,
+      muluOut,
+      divuOut,
       csrOut
     )
 
@@ -158,7 +180,7 @@ class EXU(implicit val p: MarCoreConfig) extends MarCoreModule {
   io.forward.wb.rfData := Mux(alu.io.out.fire, aluOut, lsuOut)
   io.forward.fuType := io.in.bits.ctrl.fuType
 
-  val isBru = ALUCtrl.isBru(fuCtrl)
+  // val isBru = ALUCtrl.isBru(fuCtrl)
   /* perfCntCondMlsuInstr */
 
 //	if (!p.FPGAPlatform) {

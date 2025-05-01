@@ -5,8 +5,8 @@ import chisel3.util._
 import chisel3.util.experimental.BoringUtils
 
 import defs._
-import module.fu.BRUIO
 import utils._
+import module.fu.BRUIO
 import module.fu.BPUUpdate
 import top.Settings
 

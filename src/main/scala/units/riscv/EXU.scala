@@ -1,12 +1,11 @@
-// package units.mips
+// package units
 //
 // import chisel3._
 // import chisel3.util._
 //
 // import utils._
 // import defs._
-// //import module.fu.{BPU,LSU}
-// import module.fu.mips._
+// import module.fu._
 // import module.cache._
 // import bus.cacheBus._
 // import top.Settings
@@ -14,11 +13,16 @@
 // class EXU(implicit val p: MarCoreConfig) extends MarCoreModule {
 //   implicit val moduleName: String = this.name
 //   val io = IO(new Bundle {
-//     val in = Flipped(Decoupled(new DecodeIO_MIPS))
-//     val out = Decoupled(new CommitIO_MIPS)
+//     val in = Flipped(Decoupled(new DecodeIO))
+//     val out = Decoupled(new CommitIO)
 //     val flush = Input(Bool())
 //     val dmem = new CacheBus
 //     val forward = new ForwardIO
+// //		val memMMU = Flipped(new MemMMUIO)
+//     val csr =
+//       if (Settings.get("EnableDifftest") && Settings.get("DiffTestCSR"))
+//         Some(new RegsDiffIO(num = 4))
+//       else None
 //     val bpuUpdate = new BPUUpdate
 //   })
 //
@@ -50,6 +54,7 @@
 //
 //   /* LSU */
 //   val lsu = Module(new UnpipelinedLSU)
+// //	val lsuTlbPF = WireInit(false.B)
 //   val lsuOut = lsu.access(
 //     valid = fuValids(FuType.lsu),
 //     srcA = srcA,
@@ -72,17 +77,54 @@
 //   )
 //   mdu.io.out.ready := true.B
 //
+//   /* CSR, Done*/
+//   val csr = Module(new CSR)
+//   val csrOut = csr.access(
+//     valid = fuValids(FuType.csr),
+//     srcA = srcA,
+//     srcB = srcB,
+//     ctrl = fuCtrl
+//   )
+//   csr.io.cfIn := io.in.bits.cf
+//   csr.io.cfIn.exceptionVec(loadAddrMisaligned) := lsu.io.ioLoadAddrMisaligned
+//   csr.io.cfIn.exceptionVec(storeAddrMisaligned) := lsu.io.ioStoreAddrMisaligned
+//   csr.io.instrValid := io.in.valid && !io.flush
+//   csr.io.isBackendException := false.B
+//   io.out.bits.intrNO := csr.io.intrNO
+//   csr.io.isBackendException := false.B
+//   csr.io.out.ready := true.B
+//
+// //	csr.io.imemMMU <> io.memMMU.imem
+// //	csr.io.dmemMMU <> io.memMMU.dmem
+//
+//   /* MOU did't need yet */
+//
 //   io.out.bits.decode := DontCare
 //   (io.out.bits.decode.ctrl, io.in.bits.ctrl) match {
 //     case (o, i) =>
-//       o.rfWen := i.rfWen // && (!lsu.io.ioLoadAddrMisaligned && !lsu.io.ioStoreAddrMisaligned || !fuValids(FuType.lsu)) && !(csr.io.wenFix && fuValids(FuType.csr))
+//       o.rfWen := i.rfWen && (!lsu.io.ioLoadAddrMisaligned && !lsu.io.ioStoreAddrMisaligned || !fuValids(
+//         FuType.lsu
+//       )) && !(csr.io.wenFix && fuValids(FuType.csr))
 //       o.rfDest := i.rfDest
 //       o.fuType := i.fuType
 //   }
 //   io.out.bits.decode.cf.pc := io.in.bits.cf.pc
 //   io.out.bits.decode.cf.instr := io.in.bits.cf.instr
+//   io.out.bits.decode.cf.runahead_checkpoint_id := io.in.bits.cf.runahead_checkpoint_id
 //   io.out.bits.decode.cf.isBranch := io.in.bits.cf.isBranch
-//   io.out.bits.decode.cf.redirect := alu.io.redirect
+//   io.out.bits.decode.cf.redirect :=
+//     Mux(csr.io.redirect.valid, csr.io.redirect, alu.io.redirect)
+//
+//   if (Settings.get("TraceBasicInfo"))
+//     Debug(
+//       csr.io.redirect.valid || alu.io.redirect.valid,
+//       "[REDIRECT] flush: %d csr (%b,%x) alu (%b,%x)\n",
+//       io.flush,
+//       csr.io.redirect.valid,
+//       csr.io.redirect.target,
+//       alu.io.redirect.valid,
+//       alu.io.redirect.target
+//     )
 //
 //   io.out.valid := io.in.valid && MuxLookup(fuType, true.B)(
 //     List(
@@ -94,8 +136,19 @@
 //   io.out.bits.commits(FuType.alu) := aluOut
 //   io.out.bits.commits(FuType.lsu) := lsuOut
 //   io.out.bits.commits(FuType.mdu) := mduOut
-//   io.out.bits.commits(FuType.csr) := 0.U
+//   io.out.bits.commits(FuType.csr) := csrOut
 //   io.out.bits.commits(FuType.mou) := 0.U
+//
+//   if (Settings.get("TraceBasicInfo"))
+//     Debug(
+//       io.out.fire,
+//       "[FIRE] FuType %x alu %x lsu %x mdu %x csr %x\n",
+//       io.in.bits.ctrl.fuType,
+//       aluOut,
+//       lsuOut,
+//       mduOut,
+//       csrOut
+//     )
 //
 //   io.in.ready := !io.in.valid || io.out.fire
 //
@@ -106,7 +159,31 @@
 //   io.forward.fuType := io.in.bits.ctrl.fuType
 //
 //   val isBru = ALUCtrl.isBru(fuCtrl)
+//   /* perfCntCondMlsuInstr */
 //
+// //	if (!p.FPGAPlatform) {
+// //		val cycleCnt = WireInit(0.U(64.W))
+// //		val instrCnt = WireInit(0.U(64.W))
+// //		val marcoretrap = WireInit(io.in.bits.ctrl.isMarCoreTrap && io.in.valid)
+// //
+// //		BoringUtils.addSink(cycleCnt, "simCycleCnt")
+// //		BoringUtils.addSink(instrCnt, "simInstrCnt")
+// //		BoringUtils.addSource(marcoretrap, "marcoretrap")
+// //
+// //		val difftest = DifftestModule(new DiffTrapEvent)
+// //		difftest.coreid		:= 0.U
+// //		difftest.hasTrap	:= marcoretrap
+// //		difftest.code		:= io.in.bits.data.srcA
+// //		difftest.pc			:= io.in.bits.cf.pc
+// //		difftest.cycleCnt	:= cycleCnt
+// //		difftest.instrCnt	:= instrCnt
+// //		difftest.hasWFI		:= false.B
+// //	}
 //   // For DiffTest
+//   if (Settings.get("EnableDifftest")) {
+//     if (Settings.get("DiffTestCSR")) {
+//       io.csr.get <> csr.io.csr.get
+//     }
+//   }
 //   io.out.bits.decode.cf.pnpc := io.in.bits.cf.pnpc
 // }
