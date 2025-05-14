@@ -220,7 +220,7 @@ class BRU extends MarCoreModule {
   io.bpuUpdate.fuCtrl := ctrl
   io.bpuUpdate.btbType := LookupTree(
     ctrl,
-    BaseConfig.getT("ISA") match {
+    BaseConfig.isa match {
       case ISA.RISCV     => RV32I_BRUInstr.bruCtrl2BtbTypeTable
       case ISA.MIPS      => MIPS32_BJInstr.bruCtrl2BtbTypeTable
       case ISA.LoongArch => LA32R_JumpInstr.bruCtrl2BtbTypeTable
@@ -228,11 +228,11 @@ class BRU extends MarCoreModule {
   )
 
   val stargetSign =
-    (SignExt(io.cfIn.pc, AddrBits) + BaseConfig.getT("ISA") match {
+    (SignExt(io.cfIn.pc, AddrBits) + (BaseConfig.isa match {
       case ISA.RISCV     => 4.U
       case ISA.MIPS      => 8.U
       case ISA.LoongArch => 4.U
-    })(XLEN - 1, 0)
+    })(XLEN - 1, 0))
   // mark redirect type as speculative exec fix
   // may be can be moved to ISU to calculate pc + 4
   // this is actually for jal and jalr to write pc + 4/2 to rd

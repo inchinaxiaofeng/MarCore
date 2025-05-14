@@ -37,7 +37,7 @@ class RISCVDecoder(implicit val p: MarCoreConfig)
         dec
       )
     }
-  val isRVC = if (HasCExtension) instr(1, 0) =/= "b11".U else false.B
+  val isRVC = false.B // if (HasCExtension) instr(1, 0) =/= "b11".U else false.B
 
   io.out.bits := DontCare
 

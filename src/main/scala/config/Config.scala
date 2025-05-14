@@ -65,25 +65,40 @@ object BaseConfig {
   def get(field: String) = {
     config(field).asInstanceOf[Boolean]
   }
+  @deprecated("Not Support in BaseConfig")
   def getLong(field: String) = {
     config(field).asInstanceOf[Long]
   }
+  @deprecated("Not Support in BaseConfig")
   def getInt(field: String) = {
     config(field).asInstanceOf[Int]
   }
+  @deprecated("Not Support in BaseConfig")
   def getString(field: String) = {
     config(field).asInstanceOf[String]
   }
-  def getT[T](field: String): T = {
+  private def getT[T](field: String): T = {
     config(field).asInstanceOf[T]
   }
+
+  /** MarCore Current ISA choices
+    * @note
+    *   ISA.LoongArch ISA.MIPS ISA.RISCV
+    */
+  val isa = getT[ISA.Value]("ISA")
+
+  /** MarCore Current Top Module choices
+    * @note
+    *   ChipLab YosysSTA SimCore SimSoC
+    */
+  val top = getT[TopType.Value]("TopType")
 }
 
 /** 這個是用於引入 ISA 相關配置的
   */
 object ISAConfig {
   val isaConfig: Map[String, Any] =
-    BaseConfig.getT("ISA") match {
+    BaseConfig.isa match {
       case ISA.RISCV     => RISCVConfig()
       case ISA.MIPS      => MIPSConfig()
       case ISA.LoongArch => LoongArchConfig()

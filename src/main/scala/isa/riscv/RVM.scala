@@ -30,7 +30,7 @@ object RV32M_Instr extends HasRISCV_InstrType {
     REM -> List(InstrR, FuType.divu, DivUCtrl.rem),
     REMU -> List(InstrR, FuType.divu, DivUCtrl.remu)
   )
-  val table = mul_table ++ (if (HasDiv) div_table else Array.empty)
+  val table = mul_table ++ div_table // (if (HasDiv) div_table else Array.empty)
 }
 
 object RV64M_Instr extends HasRISCV_InstrType {
@@ -50,11 +50,10 @@ object RV64M_Instr extends HasRISCV_InstrType {
     REMW -> List(InstrR, FuType.divu, DivUCtrl.remw),
     REMUW -> List(InstrR, FuType.divu, DivUCtrl.remuw)
   )
-  val table = mul_table ++ (if (HasDiv) div_table else Array.empty)
+  val table = mul_table ++ div_table // (if (HasDiv) div_table else Array.empty)
 }
 
 object RVMInstr extends HasMarCoreParameter {
   val table =
     RV32M_Instr.table ++ (if (XLEN == 64) RV64M_Instr.table else Array.empty)
 }
-

@@ -111,7 +111,7 @@ class ALU extends MarCoreModule {
   val xorRes = srcA ^ srcB
   val andRes = srcA & srcB
   val orRes = srcA | srcB
-  val norRes = !orRes
+  val norRes = ~orRes
 
   val sltu = !adderCarry
   val slt = xorRes(XLEN - 1) ^ sltu
@@ -133,10 +133,8 @@ class ALU extends MarCoreModule {
       ALUCtrl.getEncoded(ALUCtrl.sll) -> ((shsrcA << shamt)(XLEN - 1, 0)),
       ALUCtrl.getEncoded(ALUCtrl.srl) -> (shsrcA >> shamt),
       ALUCtrl.getEncoded(ALUCtrl.sra) -> ((shsrcA.asSInt >> shamt).asUInt),
-//
       ALUCtrl.getEncoded(ALUCtrl.slt) -> ZeroExt(slt, XLEN), // 對 Bool 值進行0拓展
       ALUCtrl.getEncoded(ALUCtrl.sltu) -> ZeroExt(sltu, XLEN), // 對 Bool 值進行0拓展
-//
       ALUCtrl.getEncoded(ALUCtrl.or) -> orRes,
       ALUCtrl.getEncoded(ALUCtrl.and) -> andRes,
       ALUCtrl.getEncoded(ALUCtrl.nor) -> norRes,
@@ -147,4 +145,18 @@ class ALU extends MarCoreModule {
   io.out.bits := res
   io.in.ready := io.out.ready
   io.out.valid := valid
+
+  // ==== Log out ====
+  Trace(
+    io.in.fire,
+    "[In  Fire] Ctrl %b SrcA 0x%x, SrcB 0x%x\n",
+    ctrl,
+    srcA,
+    srcB
+  )
+  Trace(
+    io.out.fire,
+    "[Out Fire] Out 0x%x\n",
+    io.out.bits
+  )
 }

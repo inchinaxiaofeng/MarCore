@@ -113,7 +113,7 @@ object InstructionsRISCV extends HasRISCV_InstrType with HasMarCoreParameter {
   def NOP = 0x00000013.U
   val DecodeDefault = List(InstrN, FuType.csr, CSRCtrl.jmp)
   def DecodeTable = RVIInstr.table ++ // MarCoreTrap.table ++
-    (if (HasMExtension) RVMInstr.table else Array.empty) ++
+    RVMInstr.table ++ // (if (HasMExtension) RVMInstr.table else Array.empty) ++
     Priviledged.table ++
     RVZicsrInstr.table
 }

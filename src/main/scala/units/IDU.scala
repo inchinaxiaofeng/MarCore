@@ -16,7 +16,7 @@ class IDU(implicit val p: MarCoreConfig) extends MarCoreModule {
     val out = Vec(2, Decoupled(new DecodeIO))
   })
 
-  val (decoder1, decoder2) = BaseConfig.getT("ISA") match {
+  val (decoder1, decoder2) = BaseConfig.isa match {
     case ISA.RISCV =>
       val d1 = Module(new RISCVDecoder)
       val d2 = Module(new RISCVDecoder)
