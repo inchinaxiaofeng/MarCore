@@ -21,7 +21,7 @@ class LoongArchALU extends MarCoreModule {
     io.out.bits
   }
 
-  val isAddrSub = ALUCtrl.isSub(ctrl)
+  val isAddrSub = ALUCtrl.isInvert(ctrl)
   val (adderRes, adderCarry) =
     AdderGen(XLEN, srcA, (srcB ^ Fill(XLEN, isAddrSub)), isAddrSub)
 

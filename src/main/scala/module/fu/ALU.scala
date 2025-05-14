@@ -25,7 +25,7 @@ import blackbox._
   *   不同架構不需要實現全部指令, 僅僅對用到的進行處理即可. 不實現就不會造成面積開銷的浪費.
   *
   * @param `[6]`
-  *   Adder sub bit. 加法器控制位, 可以通過這一位判斷當前是加還是減. 當拉高時, 加法器將進行減法.
+  *   Invert bit. 描述逻辑翻转位. 当这一位拉高时, 表示对不拉高的逻辑的翻转.
   *
   * @param `[5]`
   *   Word bit. XLEN == 64 時, 當這一位拉高時，指 Word 數據類型. XLEN == 32時, 這一位被拋棄.
@@ -44,27 +44,21 @@ object ALUCtrl {
   def addwu = "b011_0000".U
   def subw = "b110_0000".U
 
+  // Same encoded type, but diffrent word bit.
   def sll = "b000_0001".U
-  def srl = "b000_0010".U
-  def sra = "b000_0011".U
-  def sllw = "b010_0100".U
-  def srlw = "b010_0101".U
-  def sraw = "b010_0110".U
+  def srl = "b100_0010".U
+  def sra = "b100_0011".U
+  def sllw = "b010_0001".U
+  def srlw = "b110_0010".U
+  def sraw = "b110_0011".U
 
   def slt = "b100_0111".U // 需要比較
   def sltu = "b101_1000".U // 需要比較
 
   def or = "b000_1001".U
-  def nor = "b000_1010".U
+  def nor = "b100_1010".U
   def xor = "b000_1011".U
   def and = "b000_1100".U
-
-  /** 判斷是否是減法. 設計用於傳遞給加法器進行減法
-    *
-    * @param ctrl
-    * @return
-    */
-  def isSub(ctrl: UInt) = ctrl(6)
 
   /** 用於判斷是否是 Word 類型. 在32位的情況下沒有意義
     *
@@ -79,6 +73,18 @@ object ALUCtrl {
     * @return
     */
   def isUnsign(ctrl: UInt) = ctrl(4)
+
+  /** 判断当前指令是否需要进行逻辑翻转.
+    *
+    * Rule:
+    *   - right is the `invert` of left
+    *   - sub is the `invert` of add
+    *   - not(nor, nand) is the `invert` of is(or, and)
+    *
+    * @param ctrl
+    * @return
+    */
+  def isInvert(ctrl: UInt) = ctrl(6)
 
   /** 訪問編碼位
     *
@@ -104,7 +110,7 @@ class ALU extends MarCoreModule {
     io.out.bits
   }
 
-  val isAddrSub = ALUCtrl.isSub(ctrl)
+  val isAddrSub = ALUCtrl.isInvert(ctrl)
   val (adderRes, adderCarry) =
     AdderGen(XLEN, srcA, (srcB ^ Fill(XLEN, isAddrSub)), isAddrSub)
 
@@ -116,8 +122,9 @@ class ALU extends MarCoreModule {
   val sltu = !adderCarry
   val slt = xorRes(XLEN - 1) ^ sltu
 
-  val shsrcA = MuxLookup(ALUCtrl.getEncoded(ctrl), srcA(XLEN - 1, 0))(
+  val shsrc = MuxLookup(ALUCtrl.getEncoded(ctrl), srcA(XLEN - 1, 0))(
     Seq(
+      ALUCtrl.getEncoded(ALUCtrl.sllw) -> ZeroExt(srcA(31, 0), XLEN),
       ALUCtrl.getEncoded(ALUCtrl.srlw) -> ZeroExt(srcA(31, 0), XLEN),
       ALUCtrl.getEncoded(ALUCtrl.sraw) -> SignExt(srcA(31, 0), XLEN)
     )
@@ -130,9 +137,9 @@ class ALU extends MarCoreModule {
   )
   val res = MuxLookup(ALUCtrl.getEncoded(ctrl), adderRes)(
     Seq(
-      ALUCtrl.getEncoded(ALUCtrl.sll) -> ((shsrcA << shamt)(XLEN - 1, 0)),
-      ALUCtrl.getEncoded(ALUCtrl.srl) -> (shsrcA >> shamt),
-      ALUCtrl.getEncoded(ALUCtrl.sra) -> ((shsrcA.asSInt >> shamt).asUInt),
+      ALUCtrl.getEncoded(ALUCtrl.sll) -> ((shsrc << shamt)(XLEN - 1, 0)),
+      ALUCtrl.getEncoded(ALUCtrl.srl) -> (shsrc >> shamt),
+      ALUCtrl.getEncoded(ALUCtrl.sra) -> ((shsrc.asSInt >> shamt).asUInt),
       ALUCtrl.getEncoded(ALUCtrl.slt) -> ZeroExt(slt, XLEN), // 對 Bool 值進行0拓展
       ALUCtrl.getEncoded(ALUCtrl.sltu) -> ZeroExt(sltu, XLEN), // 對 Bool 值進行0拓展
       ALUCtrl.getEncoded(ALUCtrl.or) -> orRes,

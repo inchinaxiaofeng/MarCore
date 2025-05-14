@@ -83,28 +83,28 @@ class ALUSpec
           val signedA = if ((a & signBit) != 0) a - (BigInt(1) << XLEN) else a
           (signedA >> amt) & mask
         }),
-        // ALUCtrl.sllw.litValue -> ((a: BigInt, b: BigInt) => {
-        //   val w = (a << (b.toInt & shamtWMask)) & mask32
-        //   val ext = if ((w & (BigInt(1) << 31)) != 0) w | (~mask32) else w
-        //   ext & mask
-        // }),
-        // ALUCtrl.srlw.litValue -> ((a: BigInt, b: BigInt) => {
-        //   val amt = b.toInt & shamtWMask
-        //   val w = (a >> amt) & mask32
-        //   w & mask
-        // }),
-        // ALUCtrl.sraw.litValue -> ((a: BigInt, b: BigInt) => {
-        //   val amt = b.toInt & shamtWMask
-        //   val w32 = a & mask32
-        //   // 把低 32 位当有符号数转回 BigInt
-        //   val signed =
-        //     if ((w32 & (BigInt(1) << 31)) != 0) w32 - (BigInt(1) << 32) else w32
-        //   val resW = (signed >> amt) & mask32
-        //   // 符号扩展到 full-width
-        //   val ext =
-        //     if ((resW & (BigInt(1) << 31)) != 0) resW | (~mask32) else resW
-        //   ext & mask
-        // }),
+        ALUCtrl.sllw.litValue -> ((a: BigInt, b: BigInt) => {
+          val w = (a << (b.toInt & shamtWMask)) & mask32
+          val ext = if ((w & (BigInt(1) << 31)) != 0) w | (~mask32) else w
+          ext & mask
+        }),
+        ALUCtrl.srlw.litValue -> ((a: BigInt, b: BigInt) => {
+          val amt = b.toInt & shamtWMask
+          val w = (a >> amt) & mask32
+          w & mask
+        }),
+        ALUCtrl.sraw.litValue -> ((a: BigInt, b: BigInt) => {
+          val amt = b.toInt & shamtWMask
+          val w32 = a & mask32
+          // 把低 32 位当有符号数转回 BigInt
+          val signed =
+            if ((w32 & (BigInt(1) << 31)) != 0) w32 - (BigInt(1) << 32) else w32
+          val resW = (signed >> amt) & mask32
+          // 符号扩展到 full-width
+          val ext =
+            if ((resW & (BigInt(1) << 31)) != 0) resW | (~mask32) else resW
+          ext & mask
+        }),
         ALUCtrl.slt.litValue -> ((a: BigInt, b: BigInt) => {
           val signA =
             if ((a & (BigInt(1) << (XLEN - 1))) != 0) a - (BigInt(1) << XLEN)
