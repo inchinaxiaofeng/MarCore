@@ -9,7 +9,7 @@
 **    May you share freely, never taking more than you give.
 **
  */
-package core.backend.fu.basis
+package utils.fu
 
 import chisel3._
 import chisel3.util._

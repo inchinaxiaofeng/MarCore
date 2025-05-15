@@ -74,21 +74,8 @@ object DivUCtrl {
   def isZero(ctrl: UInt) = ctrl(4)
 }
 
-class DivUIO extends FuCtrlIO {}
-
-class DivU extends MarCoreModule {
+class DivU extends MarCoreFuModule {
   implicit val moduleName: String = this.name
-  val io = IO(new MDUIO)
-
-  val (valid, srcA, srcB, ctrl) =
-    (io.in.valid, io.in.bits.srcA, io.in.bits.srcB, io.in.bits.ctrl)
-  def access(valid: Bool, srcA: UInt, srcB: UInt, ctrl: UInt): UInt = {
-    this.valid := valid
-    this.srcA := srcA
-    this.srcB := srcB
-    this.ctrl := ctrl
-    io.out.bits
-  }
 
   val isRem = DivUCtrl.isRem(ctrl)
   val isW = DivUCtrl.isW(ctrl)

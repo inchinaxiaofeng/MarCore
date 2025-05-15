@@ -21,6 +21,7 @@ import isa.riscv.RV32I_BRUInstr
 import defs._
 import config._
 import utils._
+import utils.fu._
 import module.fu.BPUUpdate
 
 /** 通用化 BRU 編碼結構

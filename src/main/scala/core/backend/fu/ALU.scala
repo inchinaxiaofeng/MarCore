@@ -17,6 +17,7 @@ import chisel3.util.experimental.BoringUtils
 
 import defs._
 import utils._
+import utils.fu._
 import config._
 
 /** 通用化的 ALU 編碼結構。通過設計 ALU 指令，將ISA與架構實現分離。
@@ -97,21 +98,8 @@ object ALUCtrl {
   def getEncoded(ctrl: UInt) = ctrl(2, 0)
 }
 
-class ALUIO extends FuCtrlIO {}
-
-class ALU extends MarCoreModule {
+class ALU extends MarCoreFuModule {
   implicit val moduleName: String = this.name
-  val io = IO(new ALUIO)
-
-  val (valid, srcA, srcB, ctrl) =
-    (io.in.valid, io.in.bits.srcA, io.in.bits.srcB, io.in.bits.ctrl)
-  def access(valid: Bool, srcA: UInt, srcB: UInt, ctrl: UInt): UInt = {
-    this.valid := valid
-    this.srcA := srcA
-    this.srcB := srcB
-    this.ctrl := ctrl
-    io.out.bits
-  }
 
   // ==== Caculate Logic ====
   // === Rename Ctrl Sig ===

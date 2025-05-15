@@ -13,7 +13,7 @@ object XLen extends Enumeration {
 }
 
 object CacheReplacePolicy extends Enumeration {
-  val LRU, LFU, FIFO, Random = Value
+  val NONE, LRU, LFU, FIFO, RAND = Value
 }
 
 /** 架構選擇枚舉
@@ -50,18 +50,13 @@ private[config] object Config {
     "ISA" -> ISA.LoongArch, // 架構
     "TopType" -> TopType.ChipLab, // 頂層封裝對象
     // ==== Struct ====
-    "HasICache" -> true,
-    "HasDCache" -> true,
+    "HasICache" -> false, // 目前只支持false
+    "HasDCache" -> false, // 目前只支持false
     "HasL2Cache" -> false, // 目前只支持false
-    "ICacheReplacePolicy" -> CacheReplacePolicy.Random,
-    "DCacheReplacePolicy" -> CacheReplacePolicy.Random,
+    "CacheReplacePolicy" -> CacheReplacePolicy.RAND,
     // ==== Log ====
-    // === Func Unit ===
-    "LogALU" -> false,
-    "LogBRU" -> false,
-    "LogMulU" -> false,
-    "LogDivU" -> false,
-    "LogLSU" -> false,
+    // === Cache ===
+    "LogCache" -> false,
     // === Frontend ====
     "LogBPU" -> false,
     "LogIFU" -> false,
@@ -69,7 +64,13 @@ private[config] object Config {
     "LogISU" -> false,
     // === Backend ===
     "LogEXU" -> false,
-    "LogWBU" -> false
+    "LogWBU" -> false,
+    // == Func Unit ==
+    "LogALU" -> false,
+    "LogBRU" -> false,
+    "LogMulU" -> false,
+    "LogDivU" -> false,
+    "LogLSU" -> false
   )
 }
 
@@ -107,6 +108,10 @@ object BaseConfig {
     *   ChipLab YosysSTA SimCore SimSoC
     */
   val top = getT[TopType.Value]("TopType")
+
+  /** Cache 替换策略
+    */
+  val cache = getT[CacheReplacePolicy.Value]("CacheReplacePolicy")
 }
 
 /** 這個是用於引入 ISA 相關配置的

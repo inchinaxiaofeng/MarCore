@@ -1,11 +1,10 @@
-package core.backend.fu
+package utils.fu
 
 import chisel3._
 import chisel3.util._
 
 import defs._
 import utils._
-import core.backend.fu.basis._
 
 // 超前进位逻辑模块
 // 使用Vec(4,UInt(1.W))，必须逐个赋值

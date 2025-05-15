@@ -40,7 +40,6 @@ import config.BaseConfig
   * @param `[2,0]`
   *   保留
   */
-
 object MulUCtrl {
   // 這裏被設計爲無符號拓展在於可以節約邏輯
   def mul = "b0011_000".U
@@ -83,21 +82,8 @@ object MulUCtrl {
   def isBzero(ctrl: UInt) = ctrl(3)
 }
 
-class MulUIO extends FuCtrlIO {}
-
-class MulU extends MarCoreModule {
+class MulU extends MarCoreFuModule {
   implicit val moduleName: String = this.name
-  val io = IO(new MDUIO)
-
-  val (valid, srcA, srcB, ctrl) =
-    (io.in.valid, io.in.bits.srcA, io.in.bits.srcB, io.in.bits.ctrl)
-  def access(valid: Bool, srcA: UInt, srcB: UInt, ctrl: UInt): UInt = {
-    this.valid := valid
-    this.srcA := srcA
-    this.srcB := srcB
-    this.ctrl := ctrl
-    io.out.bits
-  }
 
   val isHigh = MulUCtrl.isHigh(ctrl)
   val isW = MulUCtrl.isW(ctrl)
