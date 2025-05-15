@@ -46,15 +46,30 @@ object TopType extends Enumeration {
   */
 private[config] object Config {
   def apply() = Map(
+    // ==== Basic ====
     "ISA" -> ISA.LoongArch, // 架構
     "TopType" -> TopType.ChipLab, // 頂層封裝對象
+    // ==== Struct ====
     "HasICache" -> true,
     "HasDCache" -> true,
     "HasL2Cache" -> false, // 目前只支持false
     "ICacheReplacePolicy" -> CacheReplacePolicy.Random,
     "DCacheReplacePolicy" -> CacheReplacePolicy.Random,
-    "RuntimeLog" -> false, // 向代碼中添加 print 代碼，兼容 verilator 和 Chisel Test
-    "ColorfulLog" -> false // 使用 Chisel Test的時候可以開啓。
+    // ==== Log ====
+    // === Func Unit ===
+    "LogALU" -> false,
+    "LogBRU" -> false,
+    "LogMulU" -> false,
+    "LogDivU" -> false,
+    "LogLSU" -> false,
+    // === Frontend ====
+    "LogBPU" -> false,
+    "LogIFU" -> false,
+    "LogIDU" -> false,
+    "LogISU" -> false,
+    // === Backend ===
+    "LogEXU" -> false,
+    "LogWBU" -> false
   )
 }
 
@@ -118,5 +133,4 @@ object ISAConfig {
   def getT[T](field: String): T = {
     isaConfig(field).asInstanceOf[T]
   }
-
 }

@@ -14,13 +14,15 @@ import chisel3._
 import chisel3.stage._
 import java.nio.file.{Files, Path}
 import module.fu.ALU
+import module.fu.BRU
 
 /** `mill MarCore.runMain Elaborate` to run this.
   */
 object Elaborate extends App {
   // 1) 在这里列出所有要生成的（模块名，输出目录）对
   val jobs = Seq(
-    ("ALU", "build/module/fu/ALU")
+    ("ALU", "build/module/fu/ALU"),
+    ("BRU", "build/module/fu/BRU")
     // 如果还有其他 top，就继续加：
     // ("YourTop", "out/yourtop")
   )
@@ -28,6 +30,7 @@ object Elaborate extends App {
   // 2) 根据名字返回一个 Generator 函数
   def makeGen(name: String): () => RawModule = name match {
     case "ALU" => () => new ALU()
+    case "BRU" => () => new BRU()
     // case "YourTop"     => () => new YourTop()
     case other => throw new IllegalArgumentException(s"Unknown top: $other")
   }

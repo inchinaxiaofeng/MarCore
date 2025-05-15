@@ -1,3 +1,14 @@
+/*
+** 2025 May 1
+**
+** The author disclaims copyright to this source code.  In place of
+** a legal notice, here is a blessing:
+**
+**    May you do good and not evil.
+**    May you find forgiveness for yourself and forgive others.
+**    May you share freely, never taking more than you give.
+**
+ */
 package module.fu
 
 import chisel3._
@@ -10,16 +21,11 @@ import module.fu.BPUUpdate
 import isa.riscv._
 import top.Settings
 import blackbox._
+import module.fu.ALUCtrl.srl
+import config.BaseConfig
+import config.ISA
 
 /** 通用化的 ALU 編碼結構。通過設計 ALU 指令，將ISA與架構實現分離。
-  *
-  * ALU Ctrl 的位寬將會影響流水間寄存器的開銷, 因此要節約位寬,採取了編碼的方式進行.
-  *
-  * 但是爲了避免編碼解碼開銷, 在可以的情況下, 儘量賦予每一個位獨特的意義.
-  *
-  * 考慮到主要的RISC架構中,都將 W 后缀設計爲 64-bit 下的特产，专为处理 legacy 32-bit 数据而设，32 位下無效或不存在.
-  *
-  * 因此, 我們在這裏保持一致, W 後綴只有在 64-bit 下才有意義, 32-bit 下不應該使用
   *
   * @note
   *   不同架構不需要實現全部指令, 僅僅對用到的進行處理即可. 不實現就不會造成面積開銷的浪費.
@@ -32,33 +38,36 @@ import blackbox._
   *
   * @param `[4]`
   *   Unsigned bit. 無符號標誌位. 當這一位拉高時, 對 可拓展原數據 進行0拓展, 否則將會使用符號拓展
+  *   - 对于 Encoded type 为 0 的类型而言, 代表u类型
+  *   - 对于 Encoded type 为 1 的类型而言, 代表逻辑移动
   *
-  * @param `[3,0]`
+  * @param `[2,0]`
   *   Encoded type bit. 編碼後類型, 用於在無法通過其他位分別時, 區分不同指令. 當編碼全爲 0 時用於區分不需要進行匹配
   */
 object ALUCtrl {
-  def add = "b000_0000".U
-  def addu = "b001_0000".U
-  def sub = "b100_0000".U
-  def addw = "b010_0000".U
-  def addwu = "b011_0000".U
-  def subw = "b110_0000".U
+  def add = "b000_0_000".U
+  def addu = "b001_0_000".U
+  def sub = "b100_0_000".U
+  def addw = "b010_0_000".U
+  def addwu = "b011_0_000".U
+  def subw = "b110_0_000".U
 
   // Same encoded type, but diffrent word bit.
-  def sll = "b000_0001".U
-  def srl = "b100_0010".U
-  def sra = "b100_0011".U
-  def sllw = "b010_0001".U
-  def srlw = "b110_0010".U
-  def sraw = "b110_0011".U
+  // Invert bit not work acutally.
+  def sll = "b001_0_001".U
+  def srl = "b101_0_001".U
+  def sra = "b100_0_001".U
+  def sllw = "b011_0_001".U
+  def srlw = "b111_0_001".U
+  def sraw = "b110_0_001".U
 
-  def slt = "b100_0111".U // 需要比較
-  def sltu = "b101_1000".U // 需要比較
+  def slt = "b100_0_010".U // 需要比較
+  def sltu = "b101_0_010".U // 需要比較
 
-  def or = "b000_1001".U
-  def nor = "b100_1010".U
-  def xor = "b000_1011".U
-  def and = "b000_1100".U
+  def or = "b000_0_011".U
+  def nor = "b000_0_100".U
+  def xor = "b000_0_101".U
+  def and = "b000_0_110".U
 
   /** 用於判斷是否是 Word 類型. 在32位的情況下沒有意義
     *
@@ -91,7 +100,7 @@ object ALUCtrl {
     * @param ctrl
     * @return
     */
-  def getEncoded(ctrl: UInt) = ctrl(3, 0)
+  def getEncoded(ctrl: UInt) = ctrl(2, 0)
 }
 
 class ALUIO extends FuCtrlIO {}
@@ -110,38 +119,59 @@ class ALU extends MarCoreModule {
     io.out.bits
   }
 
-  val isAddrSub = ALUCtrl.isInvert(ctrl)
+  // ==== Caculate Logic ====
+  // === Rename Ctrl Sig ===
+  val isInvert = ALUCtrl.isInvert(ctrl)
+  val isWord = ALUCtrl.isWord(ctrl)
+  val isUnsign = ALUCtrl.isUnsign(ctrl)
+
+  // === Addr gen ===
+  val isAddrSub = isInvert
   val (adderRes, adderCarry) =
     AdderGen(XLEN, srcA, (srcB ^ Fill(XLEN, isAddrSub)), isAddrSub)
 
+  // === Logic ===
   val xorRes = srcA ^ srcB
   val andRes = srcA & srcB
   val orRes = srcA | srcB
   val norRes = ~orRes
 
+  // === Cmp ====
   val sltu = !adderCarry
   val slt = xorRes(XLEN - 1) ^ sltu
 
-  val shsrc = MuxLookup(ALUCtrl.getEncoded(ctrl), srcA(XLEN - 1, 0))(
-    Seq(
-      ALUCtrl.getEncoded(ALUCtrl.sllw) -> ZeroExt(srcA(31, 0), XLEN),
-      ALUCtrl.getEncoded(ALUCtrl.srlw) -> ZeroExt(srcA(31, 0), XLEN),
-      ALUCtrl.getEncoded(ALUCtrl.sraw) -> SignExt(srcA(31, 0), XLEN)
-    )
+  // === Shift ===
+  val shsrc = Mux(
+    isUnsign,
+    ZeroExt(srcA(31, 0), XLEN),
+    SignExt(srcA(31, 0), XLEN)
+  )
+  val shamt = Mux(
+    isWord,
+    srcB(4, 0),
+    BaseConfig.isa match {
+      case ISA.MIPS => srcB(4, 0)
+      case _        => if (XLEN == 64) srcB(5, 0) else srcB(4, 0)
+    }
+  )
+  val shout = Mux(
+    isUnsign,
+    Mux(
+      isInvert,
+      shsrc >> shamt,
+      (shsrc << shamt)(XLEN - 1, 0)
+    ),
+    (shsrc.asSInt >> shamt).asUInt
   )
 
-  val shamt = Mux(
-    ALUCtrl.isWord(ctrl),
-    srcB(4, 0),
-    if (XLEN == 64) srcB(5, 0) else srcB(4, 0)
-  )
+  // ==== Choose Logic ====
   val res = MuxLookup(ALUCtrl.getEncoded(ctrl), adderRes)(
     Seq(
-      ALUCtrl.getEncoded(ALUCtrl.sll) -> ((shsrc << shamt)(XLEN - 1, 0)),
-      ALUCtrl.getEncoded(ALUCtrl.srl) -> (shsrc >> shamt),
-      ALUCtrl.getEncoded(ALUCtrl.sra) -> ((shsrc.asSInt >> shamt).asUInt),
-      ALUCtrl.getEncoded(ALUCtrl.slt) -> ZeroExt(slt, XLEN), // 對 Bool 值進行0拓展
-      ALUCtrl.getEncoded(ALUCtrl.sltu) -> ZeroExt(sltu, XLEN), // 對 Bool 值進行0拓展
+      ALUCtrl.getEncoded(ALUCtrl.sll) -> shout,
+      ALUCtrl.getEncoded(ALUCtrl.slt) -> ZeroExt(
+        Mux(isUnsign, sltu, slt),
+        XLEN
+      ), // 對 Bool 值進行0拓展
       ALUCtrl.getEncoded(ALUCtrl.or) -> orRes,
       ALUCtrl.getEncoded(ALUCtrl.and) -> andRes,
       ALUCtrl.getEncoded(ALUCtrl.nor) -> norRes,
@@ -153,17 +183,19 @@ class ALU extends MarCoreModule {
   io.in.ready := io.out.ready
   io.out.valid := valid
 
-  // ==== Log out ====
-  Trace(
-    io.in.fire,
-    "[In  Fire] Ctrl %b SrcA 0x%x, SrcB 0x%x\n",
-    ctrl,
-    srcA,
-    srcB
-  )
-  Trace(
-    io.out.fire,
-    "[Out Fire] Out 0x%x\n",
-    io.out.bits
-  )
+  // ==== Log ====
+  if (BaseConfig.get("LogALU")) {
+    Trace(
+      io.in.fire,
+      "[In  Fire] Ctrl %b SrcA 0x%x, SrcB 0x%x\n",
+      ctrl,
+      srcA,
+      srcB
+    )
+    Trace(
+      io.out.fire,
+      "[Out Fire] Out 0x%x\n",
+      io.out.bits
+    )
+  }
 }

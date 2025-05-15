@@ -31,6 +31,7 @@ class ALUSpec
     LogUtil.setDisplay(false)
     LogUtil.setLogLevel(LogLevel.TRACE)
     debugPrint = true
+    tracePrint = false
 
     simulate(new ALU) { dut =>
       // Reset & warm-up

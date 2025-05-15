@@ -1,3 +1,14 @@
+/*
+** 2025 May 1
+**
+** The author disclaims copyright to this source code.  In place of
+** a legal notice, here is a blessing:
+**
+**    May you do good and not evil.
+**    May you find forgiveness for yourself and forgive others.
+**    May you share freely, never taking more than you give.
+**
+ */
 package module.fu
 
 import chisel3._
@@ -93,7 +104,7 @@ object BRUCtrl {
     * @return
     *   true代表爲翻轉類型, false表示不翻轉
     */
-  def isInvert(ctrl: UInt) = ctrl(0)
+  def isInvert(ctrl: UInt) = ctrl(3)
 
   /** 獲得編碼後類型
     *
@@ -240,17 +251,18 @@ class BRU extends MarCoreModule {
   io.in.ready := io.out.ready
   io.out.valid := valid
 
-  if (Settings.get("TraceBRU")) {
-    Debug(
-      valid,
-      "tgt %x valid %d npc %x pdwrong %x\n",
+  // ==== LogOut ====
+  if (BaseConfig.get("LogALU")) {
+    Trace(
+      io.in.fire,
+      "[In  Fire] tgt %x valid %d npc %x pdwrong %x\n",
       io.redirect.target,
       io.redirect.valid,
       io.cfIn.pnpc,
       predictWrong
     )
-    Debug(
-      valid,
+    Trace(
+      io.in.fire,
       "taken %d addrRes %x srcA %x srcB %x ctrl %x\n",
       taken,
       adderRes,
@@ -258,7 +270,7 @@ class BRU extends MarCoreModule {
       srcB,
       ctrl
     )
-    Debug(
+    Trace(
       valid,
       "[BPW] pc %x tgt %x npc %x pdWrong %x type %x%x%x%x%x%x\n",
       io.cfIn.pc,
