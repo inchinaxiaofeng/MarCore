@@ -10,17 +10,17 @@
 **
  */
 
-package module.fu
+package core.backend.fu
 
 import chisel3._
 import chisel3.experimental.BundleLiterals._
 import chisel3.simulator.EphemeralSimulator._
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
+
 import testutils._
 import utils.{LogUtil, LogLevel}
 import defs._
-import module.fu.MulU
 
 class MulUSpec
     extends AnyFreeSpec

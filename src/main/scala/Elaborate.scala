@@ -13,16 +13,16 @@ import circt.stage._
 import chisel3._
 import chisel3.stage._
 import java.nio.file.{Files, Path}
-import module.fu.ALU
-import module.fu.BRU
+import core.backend.fu._
 
 /** `mill MarCore.runMain Elaborate` to run this.
   */
 object Elaborate extends App {
   // 1) 在这里列出所有要生成的（模块名，输出目录）对
   val jobs = Seq(
-    ("ALU", "build/module/fu/ALU"),
-    ("BRU", "build/module/fu/BRU")
+    ("ALU", "build/core/backend/fu/ALU"),
+    ("BRU", "build/core/backend/fu/BRU"),
+    ("MulU", "build/core/backend/fu/MulU")
     // 如果还有其他 top，就继续加：
     // ("YourTop", "out/yourtop")
   )
@@ -31,6 +31,7 @@ object Elaborate extends App {
   def makeGen(name: String): () => RawModule = name match {
     case "ALU" => () => new ALU()
     case "BRU" => () => new BRU()
+    case "MulU" => () => new MulU
     // case "YourTop"     => () => new YourTop()
     case other => throw new IllegalArgumentException(s"Unknown top: $other")
   }

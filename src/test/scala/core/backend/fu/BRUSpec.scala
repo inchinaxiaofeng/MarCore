@@ -10,7 +10,7 @@
 **
  */
 
-package module.fu
+package core.backend.fu
 
 import chisel3._
 import chisel3.experimental.BundleLiterals._
@@ -20,9 +20,6 @@ import org.scalatest.matchers.must.Matchers
 import testutils._
 import utils.{LogUtil, LogLevel}
 import defs._
-import module.fu.BRU
-import module.fu.BRUIO
-import module.fu.BRUCtrl
 
 class BRUSpec
     extends AnyFreeSpec
