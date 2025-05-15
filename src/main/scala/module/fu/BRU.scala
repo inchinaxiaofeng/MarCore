@@ -253,7 +253,7 @@ class BRU extends MarCoreModule {
 
   // ==== LogOut ====
   if (BaseConfig.get("LogALU")) {
-    Trace(
+    Debug(
       io.in.fire,
       "[In  Fire] tgt %x valid %d npc %x pdwrong %x\n",
       io.redirect.target,

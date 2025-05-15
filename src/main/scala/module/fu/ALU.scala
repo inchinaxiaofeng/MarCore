@@ -185,14 +185,14 @@ class ALU extends MarCoreModule {
 
   // ==== Log ====
   if (BaseConfig.get("LogALU")) {
-    Trace(
+    Debug(
       io.in.fire,
       "[In  Fire] Ctrl %b SrcA 0x%x, SrcB 0x%x\n",
       ctrl,
       srcA,
       srcB
     )
-    Trace(
+    Debug(
       io.out.fire,
       "[Out Fire] Out 0x%x\n",
       io.out.bits

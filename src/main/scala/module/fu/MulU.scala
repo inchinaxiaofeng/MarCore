@@ -1,3 +1,14 @@
+/*
+** 2025 May 1
+**
+** The author disclaims copyright to this source code.  In place of
+** a legal notice, here is a blessing:
+**
+**    May you do good and not evil.
+**    May you find forgiveness for yourself and forgive others.
+**    May you share freely, never taking more than you give.
+**
+ */
 package module.fu
 
 import chisel3._
@@ -8,12 +19,9 @@ import defs._
 import utils._
 import utils.fu._
 import top.Settings
+import config.BaseConfig
 
 /** 通用化的 MULU 編碼結構。通過設計 MULU 指令，將ISA與架構實現分離。
-  *
-  * 考慮到主要的RISC架構中,都將 W 后缀設計爲 64-bit 下的特产，专为处理 legacy 32-bit 数据而设，32 位下無效或不存在.
-  *
-  * 因此, 我們在這裏保持一致, W 後綴只有在 64-bit 下才有意義, 32-bit 下不應該使用
   *
   * @note
   *   不同架構不需要實現全部指令, 僅僅對用到的進行處理即可. 不實現就不會造成面積開銷的浪費.
@@ -128,7 +136,7 @@ class MulU extends MarCoreModule {
   }
 
   // Instantiate ArrayMulDataModule
-  val mul = Module(new ArrayMulDataModule(XLEN))
+  val mul = Module(new ArrayMulDataModule(XLEN + 1))
   mul.io.a := Mux(isAzero, srcAzero, srcAsign)
   mul.io.b := Mux(isBzero, srcBzero, srcBsign)
 
@@ -146,5 +154,20 @@ class MulU extends MarCoreModule {
   io.in.ready := !s0_valid // ready 条件：空闲时才 ready
   io.out.valid := s2_valid
 
-//	BoringUtils.addSource(WireInit(mul.io.out.fire), "perfCntCondMmulInstr")
+  // ==== LogOut ====
+  if (BaseConfig.get("LogMulU")) {
+    Trace(s"stage valid $s0_valid$s1_valid$s2_valid\n")
+    Debug(
+      io.in.fire,
+      "[In  Fire] ctrl 0b%b srcA 0x%x srcB 0x%x\n",
+      ctrl,
+      srcA,
+      srcB
+    )
+    Debug(
+      io.out.fire,
+      "[Out Fire] out 0x%x\n",
+      io.out.bits
+    )
+  }
 }
