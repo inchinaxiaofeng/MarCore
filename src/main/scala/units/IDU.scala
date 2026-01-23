@@ -32,21 +32,6 @@ class IDU(implicit val p: MarCoreConfig) extends MarCoreModule {
       io.out(0).bits.cf.isBranch := d1.io.isBranch
       (d1, d2)
 
-    case ISA.MIPS =>
-      val d1 = Module(new MIPSDecoder)
-      val d2 = Module(new MIPSDecoder)
-      io.in(0) <> d1.io.in
-      io.in(1) <> d2.io.in
-      io.out(0) <> d1.io.out
-      io.out(1) <> d2.io.out
-      // 覆蓋
-      if (!EnableMultiIssue) {
-        io.in(1).ready := false.B
-        d2.io.in.valid := false.B
-      }
-      io.out(0).bits.cf.isBranch := d1.io.isBranch
-      (d1, d2)
-
     case ISA.LoongArch =>
       val d1 = Module(new LoongArchDecoder)
       val d2 = Module(new LoongArchDecoder)

@@ -149,10 +149,7 @@ class ALU extends MarCoreModule {
   val shamt = Mux(
     isWord,
     srcB(4, 0),
-    BaseConfig.isa match {
-      case ISA.MIPS => srcB(4, 0)
-      case _        => if (XLEN == 64) srcB(5, 0) else srcB(4, 0)
-    }
+    if (XLEN == 64) srcB(5, 0) else srcB(4, 0)
   )
   val shout = Mux(
     isUnsign,

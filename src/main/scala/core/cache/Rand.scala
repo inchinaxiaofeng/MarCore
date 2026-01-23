@@ -6,8 +6,9 @@ import chisel3.util._
 import defs._
 import utils._
 import bus.cacheBus._
+import config.BaseConfig
 
-sealed trait HasRANDConst extends HasCacheConst {
+sealed trait HasRandConst extends HasCacheConst {
   def CacheMetaArrayReadBus() =
     new SRAMReadBus(new MetaBundle(), set = Sets, way = Ways)
   def CacheDataArrayReadBus() =
@@ -18,33 +19,31 @@ sealed trait HasRANDConst extends HasCacheConst {
     new SRAMWriteBus(new DataBundle(), set = Sets * LineBeats, way = Ways)
 }
 
-sealed class RANDStage1IO(implicit val cacheConfig: CacheConfig)
+/** 一阶段IO
+  *
+  * @param cacheConfig
+  */
+sealed class RandStage1IO(implicit val cacheConfig: CacheConfig)
     extends CacheBundle {
   val req = new CacheBusReqBundle(userBits = userBits, idBits = idBits)
 }
 
-sealed class RANDCacheStage1(implicit val cacheConfig: CacheConfig)
+sealed class RandCacheStage1(implicit val cacheConfig: CacheConfig)
     extends CacheStageModule
-    with HasRANDConst {
+    with HasRandConst {
   implicit val moduleName: String = cacheName
+
   class CacheStage1IO extends Bundle {
     val in = Flipped(
       Decoupled(new CacheBusReqBundle(userBits = userBits, idBits = idBits))
     )
-    val out = Decoupled(new RANDStage1IO)
+    val out = Decoupled(new RandStage1IO)
     val metaReadBus = CacheMetaArrayReadBus()
     val dataReadBus = CacheDataArrayReadBus()
   }
   val io = IO(new CacheStage1IO)
 
   if (ro) when(io.in.fire) { assert(!io.in.bits.write) }
-  Debug(
-    io.in.fire,
-    "[L1$] Cache stage 1, addr in %x user %x id %x\n",
-    io.in.bits.addr,
-    io.in.bits.user.getOrElse(0.U),
-    io.in.bits.id.getOrElse(0.U)
-  )
 
   // Read meta and data
   val readBusValid = io.in.valid && io.out.ready
@@ -60,11 +59,33 @@ sealed class RANDCacheStage1(implicit val cacheConfig: CacheConfig)
   io.out.bits.req := io.in.bits
   io.out.valid := io.in.valid && io.metaReadBus.req.ready && io.dataReadBus.req.ready
   io.in.ready := (!io.in.valid || io.out.fire) && io.metaReadBus.req.ready && io.dataReadBus.req.ready
+
+  // ==== Log ====
+  if (BaseConfig.get("LogCache")) {
+    Trace(
+      io.in.fire,
+      "[L1#]\n [CTRL]\tsize 0x%x write %b\n [RW]\taddr 0x%x len 0x%x\n [WO]\tdata 0x%x strb 0b%b last %b\n",
+      io.in.bits.size,
+      io.in.bits.write,
+      io.in.bits.addr,
+      io.in.bits.len,
+      io.in.bits.data,
+      io.in.bits.strb,
+      io.in.bits.last
+    )
+    if (userBits != 0 || idBits != 0)
+      Trace(
+        io.in.fire,
+        "[L1#]\n [USER]\tuser 0x%x id 0x%x\n",
+        io.in.bits.user.getOrElse(0.U),
+        io.in.bits.id.getOrElse(0.U)
+      )
+  }
 }
 
-sealed class RANDStage2IO(implicit val cacheConfig: CacheConfig)
+sealed class RandStage2IO(implicit val cacheConfig: CacheConfig)
     extends CacheBundle
-    with HasRANDConst {
+    with HasRandConst {
   val req = new CacheBusReqBundle(userBits = userBits, idBits = idBits)
   val metas = Vec(Ways, new MetaBundle)
   val datas = Vec(Ways, new DataBundle)
@@ -75,13 +96,13 @@ sealed class RANDStage2IO(implicit val cacheConfig: CacheConfig)
   val forwardData = Output(CacheDataArrayWriteBus().req.bits)
 }
 
-sealed class RANDCacheStage2(implicit val cacheConfig: CacheConfig)
+sealed class RandCacheStage2(implicit val cacheConfig: CacheConfig)
     extends CacheStageModule
-    with HasRANDConst {
+    with HasRandConst {
   implicit val moduleName: String = cacheName
   class CacheStage2IO extends Bundle {
-    val in = Flipped(Decoupled(new RANDStage1IO))
-    val out = Decoupled(new RANDStage2IO)
+    val in = Flipped(Decoupled(new RandStage1IO))
+    val out = Decoupled(new RandStage2IO)
     val metaReadResp = Flipped(Vec(Ways, new MetaBundle))
     val dataReadResp = Flipped(Vec(Ways, new DataBundle))
     val metaWriteBus = Input(CacheMetaArrayWriteBus()) // Refill
@@ -128,7 +149,7 @@ sealed class RANDCacheStage2(implicit val cacheConfig: CacheConfig)
       forwardMeta.data,
       io.metaReadResp(i)
     )
-    Debug(
+    Trace(
       io.in.valid,
       "[Read Resp(S2)] ReadResp%d v%d tag%x d%d data%x\n",
       i.U,
@@ -190,14 +211,37 @@ sealed class RANDCacheStage2(implicit val cacheConfig: CacheConfig)
   io.out.bits.req <> req
   io.out.valid := io.in.valid
   io.in.ready := !io.in.valid || io.out.fire
+
+  // ==== Log ====
+  if (BaseConfig.get("LogCache")) {
+    Trace(
+      io.in.fire,
+      "[L2#]\n [CTRL]\tsize 0x%x write %b\n [RW]\taddr 0x%x len 0x%x\n [WO]\tdata 0x%x strb 0b%b last %b\n",
+      io.in.bits.req.size,
+      io.in.bits.req.write,
+      io.in.bits.req.addr,
+      io.in.bits.req.len,
+      io.in.bits.req.data,
+      io.in.bits.req.strb,
+      io.in.bits.req.last
+    )
+    if (userBits != 0 || idBits != 0)
+      Trace(
+        io.in.fire,
+        "[L2#]\n [USER]\tuser 0x%x id 0x%x\n",
+        io.in.bits.req.user.getOrElse(0.U),
+        io.in.bits.req.id.getOrElse(0.U)
+      )
+
+  }
 }
 
-sealed class RANDCacheStage3(implicit val cacheConfig: CacheConfig)
+sealed class RandCacheStage3(implicit val cacheConfig: CacheConfig)
     extends CacheStageModule
-    with HasRANDConst {
+    with HasRandConst {
   implicit val moduleName: String = cacheName
   class CacheStage3IO extends Bundle {
-    val in = Flipped(Decoupled(new RANDStage2IO))
+    val in = Flipped(Decoupled(new RandStage2IO))
     val out = Decoupled(
       new CacheBusRespBundle(userBits = userBits, idBits = idBits)
     )
@@ -227,17 +271,6 @@ sealed class RANDCacheStage3(implicit val cacheConfig: CacheConfig)
   val hitReadBurst = hit && !req.write && req.len =/= 1.U
   val meta = Mux1H(io.in.bits.waymask, io.in.bits.metas)
   assert(!(mmio && hit), "MMIO request should not hit in cache")
-
-//	val statistic_cache = Module(new STATISTIC_CACHE())
-//	statistic_cache.io.clk	:= clock
-//	statistic_cache.io.rst	:= reset
-//	statistic_cache.io.stat	:= Cat(hit, miss)
-//	if (cacheName == "icache")
-//		statistic_cache.io.id := 1.U
-//	else if (cacheName == "dcache")
-//		statistic_cache.io.id := 2.U
-//	else
-//		statistic_cache.io.id := 0.U
 
   val useForwardData =
     io.in.bits.isForwardData && io.in.bits.waymask === io.in.bits.forwardData.waymask
@@ -516,13 +549,13 @@ sealed class RANDCacheStage3(implicit val cacheConfig: CacheConfig)
   assert(!(!ro.B && io.flush), "only allow to flush icache")
 }
 
-class RANDCache(implicit val cacheConfig: CacheConfig)
+class RandCache(implicit val cacheConfig: CacheConfig)
     extends CacheModule
-    with HasRANDConst {
+    with HasRandConst {
   implicit val moduleName: String = cacheName
-  val s1 = Module(new RANDCacheStage1)
-  val s2 = Module(new RANDCacheStage2)
-  val s3 = Module(new RANDCacheStage3)
+  val s1 = Module(new RandCacheStage1)
+  val s2 = Module(new RandCacheStage2)
+  val s3 = Module(new RandCacheStage3)
   val metaArray = Module(
     new SRAMTemplateWithArbiter(
       nRead = 1,
@@ -561,11 +594,46 @@ class RANDCache(implicit val cacheConfig: CacheConfig)
   metaArray.io.w <> s3.io.metaWriteBus
   dataArray.io.w <> s3.io.dataWriteBus
 
-//	Debug(s1.io.metaReadBus.req.valid, "[READ req] meta setIdx %d data setIdx %d\n", s1.io.metaReadBus.req.bits.setIdx, s1.io.dataReadBus.req.bits.setIdx)
-//	Debug(s3.io.metaWriteBus.req.valid, "[META Write] setIdx %d tag %x valid %d dirty %d waymask %b\n", s3.io.metaWriteBus.req.bits.setIdx, s3.io.metaWriteBus.req.bits.data.tag, s3.io.metaWriteBus.req.bits.data.valid, s3.io.metaWriteBus.req.bits.data.dirty, s3.io.metaWriteBus.req.bits.waymask.getOrElse(0.U))
-//	Debug(s3.io.dataWriteBus.req.valid, "[DATA Write] setIdx %d data %x waymask %b\n", s3.io.dataWriteBus.req.bits.setIdx, s3.io.dataWriteBus.req.bits.data.data, s3.io.dataWriteBus.req.bits.waymask.getOrElse(0.U))
-//	Debug(s3.io.mem.req.fire, "[MEM REQ] addr%x len%d size%d data%x strb%b last%d write%d\n", s3.io.mem.req.bits.addr, s3.io.mem.req.bits.len, s3.io.mem.req.bits.size, s3.io.mem.req.bits.data, s3.io.mem.req.bits.strb, s3.io.mem.req.bits.last, s3.io.mem.req.bits.write)
-//	Debug(s3.io.mem.resp.fire, "[MEM RESP] data%x last%d write%d\n", s3.io.mem.resp.bits.data, s3.io.mem.resp.bits.last, s3.io.mem.resp.bits.write)
+  Debug(
+    s1.io.metaReadBus.req.valid,
+    "[READ req] meta setIdx %d data setIdx %d\n",
+    s1.io.metaReadBus.req.bits.setIdx,
+    s1.io.dataReadBus.req.bits.setIdx
+  )
+  Debug(
+    s3.io.metaWriteBus.req.valid,
+    "[META Write] setIdx %d tag %x valid %d dirty %d waymask %b\n",
+    s3.io.metaWriteBus.req.bits.setIdx,
+    s3.io.metaWriteBus.req.bits.data.tag,
+    s3.io.metaWriteBus.req.bits.data.valid,
+    s3.io.metaWriteBus.req.bits.data.dirty,
+    s3.io.metaWriteBus.req.bits.waymask.getOrElse(0.U)
+  )
+  Debug(
+    s3.io.dataWriteBus.req.valid,
+    "[DATA Write] setIdx %d data %x waymask %b\n",
+    s3.io.dataWriteBus.req.bits.setIdx,
+    s3.io.dataWriteBus.req.bits.data.data,
+    s3.io.dataWriteBus.req.bits.waymask.getOrElse(0.U)
+  )
+  Debug(
+    s3.io.mem.req.fire,
+    "[MEM REQ] addr%x len%d size%d data%x strb%b last%d write%d\n",
+    s3.io.mem.req.bits.addr,
+    s3.io.mem.req.bits.len,
+    s3.io.mem.req.bits.size,
+    s3.io.mem.req.bits.data,
+    s3.io.mem.req.bits.strb,
+    s3.io.mem.req.bits.last,
+    s3.io.mem.req.bits.write
+  )
+  Debug(
+    s3.io.mem.resp.fire,
+    "[MEM RESP] data%x last%d write%d\n",
+    s3.io.mem.resp.bits.data,
+    s3.io.mem.resp.bits.last,
+    s3.io.mem.resp.bits.write
+  )
 
   s2.io.metaReadResp := s1.io.metaReadBus.resp.data
   s2.io.dataReadResp := s1.io.dataReadBus.resp.data
@@ -573,8 +641,22 @@ class RANDCache(implicit val cacheConfig: CacheConfig)
   s2.io.dataWriteBus := s3.io.dataWriteBus
 
   if (EnableOutOfOrderExec) {}
-//	Debug("{IN: s1:(%d,%d) s2:(%d,%d) s3:(%d,%d)} {OUT: s1:(%d,%d) s2:(%d,%d) s3:(%d,%d)}\n", s1.io.in.valid, s1.io.in.ready, s2.io.in.valid, s2.io.in.ready, s3.io.in.valid, s3.io.in.ready, s1.io.out.valid, s1.io.out.ready, s2.io.out.valid, s2.io.out.ready, s3.io.out.valid, s3.io.out.ready)
-//	when (s1.io.in.valid) { Debug(p"[${cacheName}.S1]: ${s1.io.in.bits}\n") }
-//	when (s2.io.in.valid) { Debug(p"[${cacheName}.S2]: ${s2.io.in.bits.req}\n") }
-//	when (s3.io.in.valid) { Debug(p"[${cacheName}.S3]: ${s3.io.in.bits.req}\n") }
+  Debug(
+    "{IN: s1:(%d,%d) s2:(%d,%d) s3:(%d,%d)} {OUT: s1:(%d,%d) s2:(%d,%d) s3:(%d,%d)}\n",
+    s1.io.in.valid,
+    s1.io.in.ready,
+    s2.io.in.valid,
+    s2.io.in.ready,
+    s3.io.in.valid,
+    s3.io.in.ready,
+    s1.io.out.valid,
+    s1.io.out.ready,
+    s2.io.out.valid,
+    s2.io.out.ready,
+    s3.io.out.valid,
+    s3.io.out.ready
+  )
+  when(s1.io.in.valid) { Debug(p"[${cacheName}.S1]: ${s1.io.in.bits}\n") }
+  when(s2.io.in.valid) { Debug(p"[${cacheName}.S2]: ${s2.io.in.bits.req}\n") }
+  when(s3.io.in.valid) { Debug(p"[${cacheName}.S3]: ${s3.io.in.bits.req}\n") }
 }

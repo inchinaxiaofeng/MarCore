@@ -19,7 +19,7 @@ object CacheReplacePolicy extends Enumeration {
 /** 架構選擇枚舉
   */
 object ISA extends Enumeration {
-  val RISCV, MIPS, LoongArch = Value
+  val RISCV, LoongArch = Value
 }
 
 /** 頂層模塊封裝對象枚舉
@@ -56,12 +56,13 @@ private[config] object Config {
     "CacheReplacePolicy" -> CacheReplacePolicy.RAND,
     // ==== Log ====
     // === Cache ===
-    "LogCache" -> false,
+    "LogCache" -> true,
     // === Frontend ====
-    "LogBPU" -> false,
     "LogIFU" -> false,
     "LogIDU" -> false,
     "LogISU" -> false,
+    // == Func Unit ==
+    "LogBPU" -> false,
     // === Backend ===
     "LogEXU" -> false,
     "LogWBU" -> false,
@@ -70,7 +71,25 @@ private[config] object Config {
     "LogBRU" -> false,
     "LogMulU" -> false,
     "LogDivU" -> false,
-    "LogLSU" -> false
+    "LogLSU" -> false,
+    // ==== Statistic ====
+    // === Cache ===
+    "StatCache" -> true,
+    // === Frontend ====
+    "StatIFU" -> false,
+    "StatIDU" -> false,
+    "StatISU" -> false,
+    // == Func Unit ==
+    "StatBPU" -> false,
+    // === Backend ===
+    "StatEXU" -> false,
+    "StatWBU" -> false,
+    // == Func Unit ==
+    "StatALU" -> false,
+    "StatBRU" -> false,
+    "StatMulU" -> false,
+    "StatDivU" -> false,
+    "StatLSU" -> false
   )
 }
 
@@ -120,7 +139,6 @@ object ISAConfig {
   val isaConfig: Map[String, Any] =
     BaseConfig.isa match {
       case ISA.RISCV     => RISCVConfig()
-      case ISA.MIPS      => MIPSConfig()
       case ISA.LoongArch => LoongArchConfig()
     }
   def get(field: String) = {

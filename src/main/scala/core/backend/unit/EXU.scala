@@ -1,16 +1,15 @@
-package units
+package core.backend.unit
 
 import chisel3._
 import chisel3.util._
 
 import utils._
 import defs._
-import module.fu._
-import module.cache._
+import core.frontend.fu.BPUUpdate
+import core.backend.fu._
+import core.cache._
 import bus.cacheBus._
-import top.Settings
-import scribe.ANSI.ctrl
-import core.backend.fu.RISCVCSR
+import config._
 
 class EXU(implicit val p: MarCoreConfig) extends MarCoreModule {
   implicit val moduleName: String = this.name
@@ -21,10 +20,10 @@ class EXU(implicit val p: MarCoreConfig) extends MarCoreModule {
     val dmem = new CacheBus
     val forward = new ForwardIO
     val bpuUpdate = new BPUUpdate
-    val csr =
-      if (Settings.get("EnableDifftest") && Settings.get("DiffTestCSR"))
-        Some(new RegsDiffIO(num = 4))
-      else None
+    // val csr =
+    //   if (Settings.get("EnableDifftest") && Settings.get("DiffTestCSR"))
+    //     Some(new RegsDiffIO(num = 4))
+    //   else None
   })
 
   val srcA = io.in.bits.data.srcA(XLEN - 1, 0)
@@ -96,7 +95,10 @@ class EXU(implicit val p: MarCoreConfig) extends MarCoreModule {
   divu.io.out.ready := true.B
 
   /* CSR, Done*/
-  val csr = Module(new RISCVCSR)
+  val csr = BaseConfig.isa match {
+    case ISA.LoongArch => Module(new LoongArchCSR)
+    case ISA.RISCV     => Module(new RISCVCSR)
+  }
   val csrOut = csr.access(
     valid = fuValids(FuType.csr),
     srcA = srcA,
@@ -133,7 +135,7 @@ class EXU(implicit val p: MarCoreConfig) extends MarCoreModule {
   io.out.bits.decode.cf.redirect :=
     Mux(csr.io.redirect.valid, csr.io.redirect, bru.io.redirect)
 
-  if (Settings.get("TraceBasicInfo"))
+  if (BaseConfig.get("LogEXU"))
     Debug(
       csr.io.redirect.valid || bru.io.redirect.valid,
       "[REDIRECT] flush: %d csr (%b,%x) alu (%b,%x)\n",
@@ -160,7 +162,7 @@ class EXU(implicit val p: MarCoreConfig) extends MarCoreModule {
   io.out.bits.commits(FuType.csr) := csrOut
   io.out.bits.commits(FuType.mou) := 0.U
 
-  if (Settings.get("TraceBasicInfo"))
+  if (BaseConfig.get("LogEXU"))
     Debug(
       io.out.fire,
       "[FIRE] FuType %x alu %x bru %x lsu %x mulu %x divu %x csr %x\n",
@@ -184,29 +186,11 @@ class EXU(implicit val p: MarCoreConfig) extends MarCoreModule {
   // val isBru = ALUCtrl.isBru(fuCtrl)
   /* perfCntCondMlsuInstr */
 
-//	if (!p.FPGAPlatform) {
-//		val cycleCnt = WireInit(0.U(64.W))
-//		val instrCnt = WireInit(0.U(64.W))
-//		val marcoretrap = WireInit(io.in.bits.ctrl.isMarCoreTrap && io.in.valid)
-//
-//		BoringUtils.addSink(cycleCnt, "simCycleCnt")
-//		BoringUtils.addSink(instrCnt, "simInstrCnt")
-//		BoringUtils.addSource(marcoretrap, "marcoretrap")
-//
-//		val difftest = DifftestModule(new DiffTrapEvent)
-//		difftest.coreid		:= 0.U
-//		difftest.hasTrap	:= marcoretrap
-//		difftest.code		:= io.in.bits.data.srcA
-//		difftest.pc			:= io.in.bits.cf.pc
-//		difftest.cycleCnt	:= cycleCnt
-//		difftest.instrCnt	:= instrCnt
-//		difftest.hasWFI		:= false.B
-//	}
   // For DiffTest
-  if (Settings.get("EnableDifftest")) {
-    if (Settings.get("DiffTestCSR")) {
-      // io.csr.get <> csr.io.csr.get
-    }
-  }
+  // if (Settings.get("EnableDifftest")) {
+  //   if (Settings.get("DiffTestCSR")) {
+  //     io.csr.get <> csr.io.csr.get
+  //   }
+  // }
   io.out.bits.decode.cf.pnpc := io.in.bits.cf.pnpc
 }

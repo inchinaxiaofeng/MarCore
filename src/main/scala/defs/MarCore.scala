@@ -39,13 +39,15 @@ trait HasMarCoreConst extends HasMarCoreParameter {
 object AddressSpace extends HasMarCoreParameter {
   def mmio = BaseConfig.isa match {
     case ISA.LoongArch => LoongArchDefs.mmio
-    case ISA.MIPS      => MIPSDefs.mmio
     case ISA.RISCV     => RISCVDefs.mmio
   }
 
   def isMMIO(addr: UInt) = mmio
     .map(range => {
-      require(isPow2(range._2))
+      require(
+        isPow2(range._2),
+        f"MMIO range size not power-of-2: base=0x${range._1}%x size=0x${range._2}%x"
+      )
       val bits = log2Up(range._2)
       (addr ^ range._1.U)(PAddrBits - 1, bits) === 0.U
     })
@@ -56,8 +58,6 @@ trait __HasFU {
   def FUOpTypeBits = 5
   def FUTypeBits = 2
 }
-
-trait HasCtrlParameter {}
 
 object ForwardE {
   def WIDTH = 2
@@ -101,18 +101,6 @@ object ByteMask {
   def HALF = "b00000011".U
   def WORD = "b00001111".U
   def DOUBLE = "b11111111".U
-}
-
-object BranchCtrl {
-  def WIDTH = 4
-
-  def BEQ = "b0000".U
-  def BNE = "b0001".U
-  def BLT = "b0100".U
-  def BGE = "b0101".U
-  def BLTU = "b0110".U
-  def BGEU = "b0111".U
-  def JAL = "b1000".U
 }
 
 object ALUSrcA {

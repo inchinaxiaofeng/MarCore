@@ -5,10 +5,9 @@ import chisel3.util._
 
 import defs._
 import isa.riscv._
-import isa.mips._
+import isa.loongarch._
 import utils._
-import module.fu._
-import isa.loongarch.LA_Base
+import core.backend.fu._
 import config._
 
 /** Decode 類型定義
@@ -35,6 +34,7 @@ trait HasRISCV_InstrType extends HasMarCoreParameter {
   */
 trait HasLA32R_InstrType extends HasMarCoreParameter {
   def InstrN = "b0_0000".U
+  def DJ = "b1_0000".U
   def DJK = "b1_0000".U
   def DJUk5 = "b1_0000".U
   def DJUk12 = "b1_0000".U
@@ -116,14 +116,6 @@ object InstructionsRISCV extends HasRISCV_InstrType with HasMarCoreParameter {
     RVMInstr.table ++ // (if (HasMExtension) RVMInstr.table else Array.empty) ++
     Priviledged.table ++
     RVZicsrInstr.table
-}
-
-/** MIPS 架構下的譯碼表
-  */
-object InstructionsMIPS extends HasMIPS_InstrType with HasMarCoreParameter {
-  def NOP = 0x00000000.U
-  val DecodeDefault = List(InstrR, FuType.alu, ALUCtrl.sll)
-  def DecodeTable = MIPSInstrC3.table
 }
 
 /** LoongArch 架構下的譯碼表

@@ -4,7 +4,7 @@ import chisel3._
 import chisel3.util._
 
 import defs._
-import module.fu.CSRCtrl
+import core.backend.fu.CSRCtrl
 
 object RVZicsrInstr extends HasRISCV_InstrType {
   def CSRRW = BitPat("b????????????_?????_001_?????_1110011")
@@ -23,4 +23,3 @@ object RVZicsrInstr extends HasRISCV_InstrType {
     CSRRCI -> List(InstrI, FuType.csr, CSRCtrl.clri)
   )
 }
-

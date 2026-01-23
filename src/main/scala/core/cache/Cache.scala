@@ -9,8 +9,7 @@ import utils._
 import top.Settings
 import bus.cacheBus._
 import bus.debugBus.{DebugBus}
-import module.cache._
-import config.BaseConfig
+import config._
 import config.CacheReplacePolicy
 import scala.annotation.meta.param
 
@@ -85,11 +84,6 @@ private[cache] trait HasCacheConst {
     val wordIndex = UInt(WordIndexBits.W) // 2 bits
     val byteOffset = UInt((if (XLEN == 64) 3 else 2).W) // 3 bits
   }
-
-//	def CacheMetaArrayReadBus()  = new SRAMReadBus(new MetaBundle, set = Sets, way = Ways)
-//	def CacheMetaArrayWriteBus() = new SRAMWriteBus(new MetaBundle, set = Sets, way = Ways)
-//	def CacheDataArrayReadBus()  = new SRAMReadBus (new DataBundle, set = Sets * LineBeats, way = Ways)
-//	def CacheDataArrayWriteBus() = new SRAMWriteBus(new DataBundle, set = Sets * LineBeats, way = Ways)
 
   def getMetaIdx(addr: UInt) = addr.asTypeOf(addrBundle).index
   def getDataIdx(addr: UInt) =
@@ -193,7 +187,7 @@ object Cache {
   )(implicit cacheConfig: CacheConfig) = {
     val cache = BaseConfig.cache match {
       case CacheReplacePolicy.NONE => Module(new NoneCache)
-      case CacheReplacePolicy.RAND => Module(new RANDCache)
+      case CacheReplacePolicy.RAND => Module(new RandCache)
       case other =>
         throw new IllegalArgumentException(
           s"Unknown or unsupport cache policy: $other"

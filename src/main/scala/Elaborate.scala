@@ -14,6 +14,7 @@ import chisel3._
 import chisel3.stage._
 import java.nio.file.{Files, Path}
 import core.backend.fu._
+import core.cache.Cache
 
 /** `mill MarCore.runMain Elaborate` to run this.
   */
@@ -22,7 +23,8 @@ object Elaborate extends App {
   val jobs = Seq(
     ("ALU", "build/core/backend/fu/ALU"),
     ("BRU", "build/core/backend/fu/BRU"),
-    ("MulU", "build/core/backend/fu/MulU")
+    ("MulU", "build/core/backend/fu/MulU"),
+    ("NoneCache", "build/core/cache/NoneCache")
     // 如果还有其他 top，就继续加：
     // ("YourTop", "out/yourtop")
   )
@@ -31,7 +33,7 @@ object Elaborate extends App {
   def makeGen(name: String): () => RawModule = name match {
     case "ALU" => () => new ALU()
     case "BRU" => () => new BRU()
-    case "MulU" => () => new MulU
+    case "MulU" => () => new MulU()
     // case "YourTop"     => () => new YourTop()
     case other => throw new IllegalArgumentException(s"Unknown top: $other")
   }

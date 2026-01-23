@@ -4,7 +4,7 @@ import chisel3._
 import chisel3.util._
 
 import defs._
-import module.fu.CSRCtrl
+import core.backend.fu.CSRCtrl
 import module.fu.ALUCtrl
 
 object Priviledged extends HasRISCV_InstrType {

@@ -10,6 +10,7 @@ import module.fu.BRUCtrl
 import module.fu.BTBtype
 import module.fu.MulUCtrl
 import module.fu.DivUCtrl
+import core.backend.fu.CSRCtrl
 
 object LA32R_ArithInstr extends HasLA32R_InstrType {
   def ADDW = BitPat("b00_00000_00001_00000_?????_?????_?????")
@@ -61,11 +62,9 @@ object LA32R_ArithInstr extends HasLA32R_InstrType {
     ANDI -> List(DJUk12, FuType.alu, ALUCtrl.and),
     ORI -> List(DJUk12, FuType.alu, ALUCtrl.or),
     XORI -> List(DJUk12, FuType.alu, ALUCtrl.xor),
-//
     MULW -> List(DJK, FuType.mulu, MulUCtrl.mul),
     MULHW -> List(DJK, FuType.mulu, MulUCtrl.mulh),
     MULHWU -> List(DJK, FuType.mulu, MulUCtrl.mulhu),
-//
     DIVW -> List(DJK, FuType.divu, DivUCtrl.divw),
     DIVWU -> List(DJK, FuType.divu, DivUCtrl.divuw),
     MODW -> List(DJK, FuType.divu, DivUCtrl.remw),
@@ -151,45 +150,18 @@ object LA32R_AccessInstr extends HasLA32R_InstrType {
   )
 }
 
-//object LA32R_AtomInstr extends HasLA32R_InstrType {
-//	def LLW			= BitPat("00_10000_0????_?????_?????_?????_?????")
-//	def SCW			= BitPat("00_10000_1????_?????_?????_?????_?????")
-//
-//	val table	= Array (
-//		LLW			-> List(Instr2RI14, FuType.)
-//		SCW			-> List(Instr2RI14, FuType.)
-//	)
-//}
-
-object LA32R_BarrierInstr extends HasLA32R_InstrType {
-  // NOTE: 在顺序核中，这个东西不需要实现，因为顺序。这里只需要在指令类型中给定BAR，那么就打空泡就行了
-  def DBAR = BitPat("b00_11100_00111_00100_?????_?????_?????")
-  def IBAR = BitPat("b00_11100_00111_00101_?????_?????_?????")
+object LA32R_OtherInstr extends HasLA32R_InstrType {
+  def SYSCALL = BitPat("00_00000_00010_10110_?????_?????_?????")
+  def BREAK = BitPat("00_00000_00010_10100_?????_?????_?????")
 
   val table = Array(
-    DBAR -> List(Ud15, FuType.lsu, LSUCtrl.preld), // Bobble
-    IBAR -> List(Ud15, FuType.lsu, LSUCtrl.preld) // Bobble
+    SYSCALL -> List(Ud15, FuType.csr, CSRCtrl.jmp),
+    BREAK -> List(Ud15, FuType.csr, CSRCtrl.jmp)
   )
 }
-
-// object LA32R_OtherInstr extends HasLA32R_InstrType {
-//   def SYSCALL = BitPat("00_00000_00010_10110_?????_?????_?????")
-//   def BREAK = BitPat("00_00000_00010_10100_?????_?????_?????")
-//   def RDCNTVLW = BitPat("00_00000_00000_00000_11000_00000_?????")
-//   def RDCNTVHW = BitPat("00_00000_00000_00000_11001_00000_?????")
-//   def RDCNTID = BitPat("00_00000_00000_00000_11000_?????_00000")
-//
-//   val table = Array(
-//     SYSCALL -> List(),
-//     BREAK -> List(),
-//     RDCNTVLW -> List(),
-//     RDCNTVHW -> List(),
-//     RDCNTID -> List()
-//   )
-// }
 
 object LA_Base extends HasMarCoreParameter {
   val table =
     LA32R_ArithInstr.table ++ LA32R_JumpInstr.table ++ LA32R_AccessInstr.table ++
-      LA32R_BarrierInstr.table
+      LA32R_OtherInstr.table
 }
