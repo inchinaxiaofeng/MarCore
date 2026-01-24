@@ -47,3 +47,88 @@
 ## 特殊情況
 
 較爲早期的代碼可能不符合上述要求，但是正在改善。
+
+## MarCore Naming & Abbreviation Standard
+>
+> **Based on Principles from "Clean Code" & Cognitive Ergonomics**
+
+### 1. 核心原则 (Core Principles)
+
+#### 1.1 眯眼测试 (The Squint Test)
+
+代码必须能够通过“眯眼测试”。即使在快速浏览或视力模糊的情况下，形状相似的变量也必须具有显著的视觉差异。
+
+* **原则**: **区分度 > 简短度**。如果缩写导致两个截然不同的概念看起来长得一样（例如 `inst` 和 `intf`），该缩写必须被废弃。
+
+#### 1.2 认知映射最小化 (Minimize Mental Mapping)
+
+缩写必须是领域内广泛认可的（如 `clk`, `rst`, `addr`）。如果开发者需要在大脑中查表翻译才能理解缩写（如 `c` 代表 `count` 还是 `config`？），则该缩写是失败的。
+
+* **原则**: **宁可全称，不造“私有方言”。**
+
+#### 1.3 语境意义清晰 (Meaningful Context)
+
+名称应反映对象的“意图”，而不仅仅是“实现”。必须严格区分物理实体（Entity）与抽象协议（Protocol）。
+
+---
+
+### 2. 缩写黑名单与白名单 (The Blacklist & Whitelist)
+
+针对硬件开发中常见的“视觉灾难”，制定以下强制规则：
+
+#### 2.1 严禁使用的“高混淆度缩写” (Strictly Prohibited)
+
+这些缩写违反了 **眯眼测试** 或 **输入人体工学**，禁止在任何上下文中使用：
+
+| 禁用缩写 (Banned) | 视觉/输入缺陷分析 | 推荐替代 (Mandatory Alternative) | 备注 (Rationale) |
+| :--- | :--- | :--- | :--- |
+| **`intf`** | 与 `inft` (infinity?) 混淆；键位极差(n-t-f)，易打错。 | **`interfaces`** (包名) <br> **`If`** / **`Bundle`** (后缀) | 只有作为后缀时允许缩写为 `If` (大写I区分度高)，包名必须全称。 |
+| **`inst`** | 与 `int` (integer), `ins` (insert) 混淆。 | **`instr`** 或 **`uop`** | `instr` 多了辅音 `r`，区分度大增。`uop` 指微操作，在微架构语境下更精准。 |
+| **`intr`** | 与 `int` (integer), `inst` 混淆。 | **`irq`** 或 **`exc`** | `irq` 是中断请求的工业标准，视觉特征极强（q下沉）。 |
+| **`func`** | 易产生不雅联想，且容易与 `fuc` (Functional Unit Control) 混淆。 | **`fn`** 或 **`function`** | Scala/Chisel 习惯用 `fn`，或者直接全称。 |
+| **`pre`** | 歧义严重：是 `previous` 还是 `predict`？ | **`prev`** / **`pred`** | 必须明确区分“过去”和“预测”。 |
+
+#### 2.2 推荐使用的“高熵缩写” (Recommended)
+
+这些缩写经过时间考验，具有极高的辨识度（信息熵高），允许并鼓励使用以缩短代码行宽：
+
+* **`uop`** (Micro-Op): 这里的 `u` 实际上是 $\mu$，非常精准。
+* **`imm`** (Immediate): 立即数。
+* **`ptr`** (Pointer): 指针。
+* **`br`** (Branch): 分支。
+* **`idx`** (Index): 索引（比 `ind` 好，`x` 视觉冲击力强）。
+* **`rf`** (Register File): 寄存器堆（虽然短，但在 CPU 上下文无歧义）。
+
+---
+
+### 3. 命名语义学 (Naming Semantics)
+
+#### 3.1 物理 vs 协议 (Physics vs Protocol)
+
+为了解决 `IO` 和 `Interface` 的语义纠缠，采用以下命名模式：
+
+* **`IO`**: **仅用于物理端口实例**。
+  * **定义**: 它是硬件实体，是模块边界的物理引脚集合。
+  * **用法**: 仅用于 Chisel 的 `val io = IO(...)` 声明。
+  * _语境_: "这束线连好了吗？"
+
+* **`Bundle` / `Interface`**: **用于类型定义**。
+  * **定义**: 它是类型 (Class/Type)，描述了通信的规则、时序和数据结构。
+  * **用法**: 用于包名 `core.uarch.interfaces` 和类名后缀。
+  * _语境_: "这个模块遵守 `DispatchInterface` 协议吗？"
+
+#### 3.2 包名规范 (Package Naming)
+
+包名作为命名空间，也是项目中出现频率极高的词，**必须使用全称**，以提供最舒适的阅读节奏：
+
+* ✅ `package core.uarch.interfaces` (清晰，流畅)
+* ❌ `package core.uarch.intf` (卡顿，容易看错)
+* ❌ `package core.uarch.ifs` (太短，不知所云)
+
+---
+
+### 4. 总结：MarCore 命名心法
+
+1. **不要让我的眼睛猜**：如果是 `inst`，我得猜是 `instance` 还是 `instruction`。用 `instr` 我就不用猜。
+2. **不要让我的手指打结**：拒绝反人类的键位组合（如 `intf`）。
+3. **缩写是为了突出重点**：缩写那些**极高频、极低歧义**的词（如 `addr`, `data`, `uop`），把屏幕空间留给那些真正复杂的逻辑命名。

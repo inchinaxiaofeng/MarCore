@@ -14,7 +14,7 @@ import chisel3._
 import chisel3.stage._
 import java.nio.file.{Files, Path}
 import core.backend.fu._
-import core.cache.Cache
+import core.mem.cache.Cache
 
 /** `mill MarCore.runMain Elaborate` to run this.
   */

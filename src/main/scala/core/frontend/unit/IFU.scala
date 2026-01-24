@@ -10,12 +10,18 @@ import defs._
 import utils._
 import config.ISAConfig
 import config.BaseConfig
+import core.uarch.branch.BPUUpdate
+import core.uarch.interfaces.CtrlFlowIO
+import core.isa.csr.HasExceptionNO
 
 trait HasResetVector {
   val resetVector = ISAConfig.getLong("ResetVector")
 }
 
-class IFU_inorder extends MarCoreModule with HasResetVector {
+class IFU_inorder
+    extends MarCoreModule
+    with HasResetVector
+    with HasExceptionNO {
   implicit val moduleName: String = this.name
   val io = IO(new Bundle {
     val imem =

@@ -6,6 +6,7 @@ import chisel3.util._
 import defs._
 import utils._
 import config.BaseConfig
+import core.uarch.interfaces._
 
 class WBU(implicit val p: MarCoreConfig) extends MarCoreModule {
   implicit val moduleName: String = this.name

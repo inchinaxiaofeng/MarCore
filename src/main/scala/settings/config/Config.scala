@@ -19,7 +19,7 @@ object CacheReplacePolicy extends Enumeration {
 /** 架構選擇枚舉
   */
 object ISA extends Enumeration {
-  val RISCV, LoongArch = Value
+  val RISCV64, RISCV32 = Value
 }
 
 /** 頂層模塊封裝對象枚舉
@@ -47,7 +47,7 @@ object TopType extends Enumeration {
 private[config] object Config {
   def apply() = Map(
     // ==== Basic ====
-    "ISA" -> ISA.LoongArch, // 架構
+    "ISA" -> ISA.RISCV64, // 架構
     "TopType" -> TopType.ChipLab, // 頂層封裝對象
     // ==== Struct ====
     "HasICache" -> false, // 目前只支持false
@@ -138,8 +138,7 @@ object BaseConfig {
 object ISAConfig {
   val isaConfig: Map[String, Any] =
     BaseConfig.isa match {
-      case ISA.RISCV     => RISCVConfig()
-      case ISA.LoongArch => LoongArchConfig()
+      case ISA.RISCV64 => RISCV64Config()
     }
   def get(field: String) = {
     isaConfig(field).asInstanceOf[Boolean]

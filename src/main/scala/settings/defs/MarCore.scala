@@ -37,10 +37,7 @@ trait HasMarCoreConst extends HasMarCoreParameter {
 }
 
 object AddressSpace extends HasMarCoreParameter {
-  def mmio = BaseConfig.isa match {
-    case ISA.LoongArch => LoongArchDefs.mmio
-    case ISA.RISCV     => RISCVDefs.mmio
-  }
+  def mmio = RISCVDefs.mmio
 
   def isMMIO(addr: UInt) = mmio
     .map(range => {

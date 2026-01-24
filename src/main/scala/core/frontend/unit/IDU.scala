@@ -5,10 +5,11 @@ import chisel3.util._
 import chisel3.util.experimental.BoringUtils
 
 import config._
+
 import defs._
-import isa.riscv._
-import core.frontend.fu._
 import utils._
+import core.frontend.fu._
+import core.uarch.interfaces.{CtrlFlowIO, DecodeIO}
 
 class IDU(implicit val p: MarCoreConfig) extends MarCoreModule {
   val io = IO(new Bundle {
@@ -16,10 +17,7 @@ class IDU(implicit val p: MarCoreConfig) extends MarCoreModule {
     val out = Vec(2, Decoupled(new DecodeIO))
   })
 
-  val (decoder1, decoder2) = BaseConfig.isa match {
-    case ISA.RISCV     => (new RISCVDecoder, new RISCVDecoder)
-    case ISA.LoongArch => (new LoongArchDecoder, new LoongArchDecoder)
-  }
+  val (decoder1, decoder2) = (new Decoder, new Decoder)
   io.in(0) <> decoder1.io.in
   io.in(1) <> decoder2.io.in
   io.out(0) <> decoder1.io.out

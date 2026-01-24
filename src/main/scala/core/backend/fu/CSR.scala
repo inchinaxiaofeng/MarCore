@@ -6,39 +6,9 @@ import chisel3.util.experimental.BoringUtils
 
 import defs._
 import utils._
-
-object CSRCtrl {
-
-  /** 跳转指令. 用于在对应CSR中, 需要进行跳转的时候指定(Syscall, Ecall, xRet等)
-    *
-    * @return
-    */
-  def jmp = "b000".U
-
-  /** 对 bitmask 指定的位同时把 CSR 与 rs1 原子互换
-    *
-    * @return
-    */
-  def xchg = "b000".U
-
-  /** 写整寄存器（R/W）
-    *   - 旧 CSR→rd，CSR←rs1
-    *
-    * @return
-    */
-  def wrt = "b001".U
-
-  /** 写掩码置位（RS）
-    *   - CSRRS: 旧 CSR→rd，CSR← CSR_old | rs1
-    *
-    * @return
-    */
-  def set = "b010".U
-  def clr = "b011".U
-  def wrti = "b101".U
-  def seti = "b110".U
-  def clri = "b111".U
-}
+import core.uarch.interfaces._
+import core.uarch.fu.CSRCtrl
+import core.isa.csr.{HasCSRConst, HasExceptionNO}
 
 class CSRIO extends FuCtrlIO {
   val cfIn = Flipped(new CtrlFlowIO)
@@ -72,3 +42,252 @@ trait HasCSRIO {
 }
 
 abstract class MarCoreCSRIOModule extends MarCoreModule with HasCSRIO;
+
+class CSR(implicit val p: MarCoreConfig)
+    extends MarCoreCSRIOModule
+    with HasCSRConst
+    with HasExceptionNO {
+  implicit val moduleName: String = this.name
+
+  // CSR define
+  class Priv extends Bundle {
+    val m = Output(Bool())
+    val h = Output(Bool())
+    val s = Output(Bool())
+    val u = Output(Bool())
+  }
+
+  val csrNotImplemented = RegInit(UInt(XLEN.W), 0.U)
+
+  class MstatusStruct extends Bundle {
+    val sd = Output(UInt(1.W))
+
+    val pad1 = if (XLEN == 64) Output(UInt(27.W)) else null
+    val sxl = if (XLEN == 64) Output(UInt(2.W)) else null
+    val uxl = if (XLEN == 64) Output(UInt(2.W)) else null
+    val pad0 = if (XLEN == 64) Output(UInt(9.W)) else null
+
+    val tsr = Output(UInt(1.W))
+    val tw = Output(UInt(1.W))
+    val tvm = Output(UInt(1.W))
+    val mxr = Output(UInt(1.W))
+    val sum = Output(UInt(1.W))
+    val mprv = Output(UInt(1.W))
+    val xs = Output(UInt(2.W))
+    val fs = Output(UInt(2.W))
+    val mpp = Output(UInt(2.W))
+    val hpp = Output(UInt(2.W))
+    val spp = Output(UInt(1.W))
+    val pie = new Priv
+    val ie = new Priv
+  }
+
+  class SatpStruct extends Bundle {
+    val mode = UInt(4.W)
+    val asid = UInt(16.W)
+    val ppn = UInt(44.W)
+  }
+
+  class Interrupt extends Bundle {
+    val e = new Priv
+    val t = new Priv
+    val s = new Priv
+  }
+
+  // Machine-Level CSRs
+  val mtvec = RegInit(UInt(XLEN.W), 0.U)
+  val mcause = RegInit(UInt(XLEN.W), 0.U)
+//	val mtval	= RegInit(UInt(XLEN.W), 0.U)
+  val mepc = RegInit(UInt(XLEN.W), 0.U)
+  val mstatus = RegInit(UInt(XLEN.W), "ha00001800".U)
+  /* mstatus Value table */
+  /*
+	| sd   |
+	| pad1 |
+	| sxl  | hardlinked to 10, use 00 to pass xv6 test
+	| uxl  | hardlinked to 10
+	| pad0 |
+	| tsr  |
+	| tw   |
+	| tvm  |
+	| mxr  |
+	| sum  |
+	| mprv |
+	| xs   | 00 |
+	| fs   | 00 |
+	| mpp  | 11 | Machine Previous Privilege
+	| hpp  | 00 |
+	| spp  | 0 |
+	| pie  | 0000 |
+	| ie   | 0000 |
+   */
+  val mstatusStruct = mstatus.asTypeOf(new MstatusStruct)
+  def mstatusUpdateSideEffect(mstatus: UInt): UInt = {
+    val mstatusOld = WireInit(mstatus.asTypeOf(new MstatusStruct))
+    val mstatusNew = Cat(mstatusOld.fs === "b11".U, mstatus(XLEN - 2, 0))
+    mstatusNew
+  }
+
+  // Superviser-Level CSRs
+  val satp = RegInit(UInt(XLEN.W), 0.U)
+
+  // if (Settings.get("HasDTLB")) {
+  //   BoringUtils.addSource(satp, "CSRSATP")
+  // }
+
+  // CSR Priviledge Mode
+  val priviledgeMode = RegInit(UInt(2.W), ModeM)
+
+  // CSR reg map
+  val mapping = Map(
+    // Supervisor Protection and Translation
+    MaskedRegMap(Satp, satp),
+
+    // Machine Trap Setup
+    MaskedRegMap(
+      Mstatus,
+      mstatus,
+      "hffffffffffffffff".U(64.W),
+      mstatusUpdateSideEffect
+    ),
+    MaskedRegMap(Mtvec, mtvec),
+
+    // Machine Trap Handing
+    MaskedRegMap(Mepc, mepc),
+    MaskedRegMap(Mcause, mcause)
+  )
+
+  val addr = srcB(11, 0)
+  val rdata = Wire(UInt(XLEN.W))
+  val csri =
+    ZeroExt(io.cfIn.instr(19, 15), XLEN) // unsigned imm for csri. [TODO]
+  val wdata = LookupTree(
+    ctrl,
+    List(
+      CSRCtrl.wrt -> srcA,
+      CSRCtrl.set -> (rdata | srcA),
+      CSRCtrl.clr -> (rdata & ~srcA),
+      CSRCtrl.wrti -> csri, // TODO: csri --> srcB
+      CSRCtrl.seti -> (rdata | csri),
+      CSRCtrl.clri -> (rdata & ~csri)
+    )
+  )
+
+  // SATP wen check
+  val satpLegalMode = (wdata.asTypeOf(new SatpStruct).mode === 0.U) || (wdata
+    .asTypeOf(new SatpStruct)
+    .mode === 8.U)
+
+  // General CSR wen check
+  val wen =
+    (valid && ctrl =/= CSRCtrl.jmp) && (addr =/= Satp.U || satpLegalMode) && !io.isBackendException
+  val isIllegalMode = priviledgeMode < addr(9, 8)
+  val justRead =
+    (ctrl === CSRCtrl.set || ctrl === CSRCtrl.seti) && srcA === 0.U // csrrs and csrrsi are exceptions when their srcA is zero
+  val isIllegalWrite =
+    wen && (addr(
+      11,
+      10
+    ) === "b11".U) && !justRead // Write a read-only CSR register
+  val isIllegalAccess = isIllegalMode || isIllegalWrite
+
+  MaskedRegMap.generate(mapping, addr, rdata, wen && !isIllegalAccess, wdata)
+  val isIllegalAddr = MaskedRegMap.isIllegalAddr(mapping, addr)
+  val resetSatp =
+    addr === Satp.U && wen // write to satp will cause the pipeline be flushed
+  io.out.bits := rdata
+
+  // CSR inst decode
+  val ret = Wire(Bool())
+  val isEbreak =
+    addr === privEbreak && ctrl === CSRCtrl.jmp && !io.isBackendException
+  val isEcall =
+    addr === privEcall && ctrl === CSRCtrl.jmp && !io.isBackendException
+  val isMret =
+    addr === privMret && ctrl === CSRCtrl.jmp && !io.isBackendException
+  val isSret =
+    addr === privSret && ctrl === CSRCtrl.jmp && !io.isBackendException
+  val isUret =
+    addr === privUret && ctrl === CSRCtrl.jmp && !io.isBackendException
+
+  // Exception and Intr
+  // interrupts
+  val intrNO = IntPriority.foldRight(0.U)((i: Int, sum: UInt) =>
+    Mux(io.cfIn.intrVec(i), i.U, sum)
+  )
+  val raiseIntr = io.cfIn.intrVec.asUInt.orR
+  // exceptions
+  val csrExpectionVec = Wire(Vec(16, Bool()))
+  csrExpectionVec.map(_ := false.B)
+  csrExpectionVec(breakPoint) := io.in.valid && isEbreak
+  csrExpectionVec(ecallM) := priviledgeMode === ModeM && io.in.valid && isEcall
+  csrExpectionVec(ecallS) := priviledgeMode === ModeS && io.in.valid && isEcall
+  csrExpectionVec(ecallU) := priviledgeMode === ModeU && io.in.valid && isEcall
+  csrExpectionVec(
+    illegalInstr
+  ) := (isIllegalAddr || isIllegalAccess) && wen && !io.isBackendException // Trigger an illegal instr exception when unimplemented csr is being read/written or not having enough privilege
+//	csrExpectionVec(loadPageFault) :=
+  val iduExceptionVec = io.cfIn.exceptionVec
+  val raiseExceptionVec = csrExpectionVec.asUInt | iduExceptionVec.asUInt
+  val raiseException = raiseExceptionVec.orR
+  val exceptionNO = ExcPriority.foldRight(0.U)((i: Int, sum: UInt) =>
+    Mux(raiseExceptionVec(i), i.U, sum)
+  )
+  io.wenFix := raiseException
+
+  val causeNO = (raiseIntr << (XLEN - 1)) | Mux(raiseIntr, intrNO, exceptionNO)
+  io.intrNO := Mux(raiseIntr, causeNO, 0.U)
+
+  val raiseExceptionIntr = (raiseException || raiseIntr) && io.instrValid
+  val retTarget = Wire(UInt(VAddrBits.W))
+  val trapTarget = Wire(UInt(VAddrBits.W))
+  io.redirect.valid := (valid && ctrl === CSRCtrl.jmp) || raiseExceptionIntr || resetSatp
+  io.redirect.rtype := 0.U
+  io.redirect.target := Mux(
+    resetSatp,
+    io.cfIn.pc + 4.U,
+    Mux(raiseExceptionIntr, trapTarget, retTarget)
+  )
+
+  // Branch control
+  ret := isMret || isSret || isUret
+  trapTarget := mtvec(VAddrBits - 1, 0)
+  retTarget := DontCare
+
+  when(valid && isMret) {
+    val mstatusOld = WireInit(mstatus.asTypeOf(new MstatusStruct))
+    val mstatusNew = WireInit(mstatus.asTypeOf(new MstatusStruct))
+    mstatusNew.ie.m := mstatusOld.pie.m
+    priviledgeMode := mstatusOld.mpp
+    mstatusNew.pie.m := true.B
+    mstatusNew.mpp := ModeU
+    mstatus := mstatusNew.asUInt
+//		lr := false.B
+    retTarget := mepc(VAddrBits - 1, 0)
+  }
+
+  when(raiseExceptionIntr) {
+    val mstatusOld = WireInit(mstatus.asTypeOf(new MstatusStruct))
+    val mstatusNew = WireInit(mstatus.asTypeOf(new MstatusStruct))
+
+    // TODO support delegS
+    mcause := causeNO
+    mepc := SignExt(io.cfIn.pc, XLEN)
+    mstatusNew.mpp := priviledgeMode
+    mstatusNew.pie.m := mstatusOld.ie.m
+    mstatusNew.ie.m := false.B
+    priviledgeMode := ModeM
+//		when(tvalWen) {mtval := 0.U}
+
+    mstatus := mstatusNew.asUInt
+  }
+  io.in.ready := true.B
+  io.out.valid := valid
+
+  // if (Settings.get("EnableDifftest") && Settings.get("DiffTestCSR")) {
+  //   io.csr.get.regs(0) := mstatus
+  //   io.csr.get.regs(1) := mtvec
+  //   io.csr.get.regs(2) := mepc
+  //   io.csr.get.regs(3) := mcause
+  // }
+}

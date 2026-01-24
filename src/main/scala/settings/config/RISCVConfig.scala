@@ -2,7 +2,7 @@ package config
 
 import scala.annotation.meta.field
 
-private[config] object RISCVConfig {
+private[config] object RISCV64Config {
   def apply() = Map(
     "XLen" -> XLen._64, // 機器字長,當前只支持64位。
 

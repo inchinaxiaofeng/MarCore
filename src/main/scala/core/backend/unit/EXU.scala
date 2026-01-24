@@ -5,13 +5,19 @@ import chisel3.util._
 
 import utils._
 import defs._
-import core.frontend.fu.BPUUpdate
-import core.backend.fu._
-import core.cache._
 import bus.cacheBus._
 import config._
 
-class EXU(implicit val p: MarCoreConfig) extends MarCoreModule {
+import core.uarch.branch.BPUUpdate
+import core.backend.fu._
+import core.cache._
+import core.uarch.interfaces.{DecodeIO, CommitIO, ForwardIO}
+import core.isa.FuType
+import core.isa.csr.HasExceptionNO
+
+class EXU(implicit val p: MarCoreConfig)
+    extends MarCoreModule
+    with HasExceptionNO {
   implicit val moduleName: String = this.name
   val io = IO(new Bundle {
     val in = Flipped(Decoupled(new DecodeIO))
@@ -95,10 +101,7 @@ class EXU(implicit val p: MarCoreConfig) extends MarCoreModule {
   divu.io.out.ready := true.B
 
   /* CSR, Done*/
-  val csr = BaseConfig.isa match {
-    case ISA.LoongArch => Module(new LoongArchCSR)
-    case ISA.RISCV     => Module(new RISCVCSR)
-  }
+  val csr = Module(new CSR)
   val csrOut = csr.access(
     valid = fuValids(FuType.csr),
     srcA = srcA,

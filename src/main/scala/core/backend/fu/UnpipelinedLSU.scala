@@ -9,6 +9,8 @@ import utils._
 import bus.cacheBus._
 import coursier.util.Config
 import config.BaseConfig
+import core.uarch.interfaces.FuCtrlIO
+import core.uarch.fu.LSUCtrl
 
 class UnpipeLSUIO extends FuCtrlIO {
   val wdata = Input(UInt(XLEN.W))

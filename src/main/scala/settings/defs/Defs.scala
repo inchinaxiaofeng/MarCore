@@ -8,7 +8,7 @@ import chisel3.util.experimental.BoringUtils
 import config._
 import settings._
 import utils.HasColor
-import core.backend.fu.HasExceptionNO
+import core.isa.csr.HasExceptionNO
 
 /** MarCore通用參數
   */

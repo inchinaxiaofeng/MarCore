@@ -18,6 +18,7 @@ import chisel3.util.experimental.BoringUtils
 import defs._
 import utils._
 import utils.fu._
+import core.uarch.interfaces.FuCtrlIO
 
 /** 对外公共接口.
   */
