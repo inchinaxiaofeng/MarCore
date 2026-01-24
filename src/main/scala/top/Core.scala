@@ -11,6 +11,8 @@ import bus.cacheBus._
 import bus.debugBus.{DebugBus, DebugBusCrossbar1toN}
 import module.cache._
 import blackbox._
+import core.uarch.interfaces._
+import core.frontend.unit.IFU_embedded
 
 class Core(implicit val p: MarCoreConfig) extends MarCoreModule {
   require(XLEN == 64)
