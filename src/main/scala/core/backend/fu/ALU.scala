@@ -22,7 +22,7 @@ import config._
 
 import core.uarch.fu.ALUCtrl
 
-class ALU extends MarCoreFuModule {
+class ALU(implicit val p: MarCoreConfig) extends MarCoreFuModule {
   implicit val moduleName: String = this.name
 
   // ==== Caculate Logic ====
@@ -87,7 +87,7 @@ class ALU extends MarCoreFuModule {
   io.out.valid := valid
 
   // ==== Log ====
-  if (BaseConfig.get("LogALU")) {
+  if (p.Log.LogALU) {
     Debug(
       io.in.fire,
       "[In  Fire] Ctrl %b SrcA 0x%x, SrcB 0x%x\n",

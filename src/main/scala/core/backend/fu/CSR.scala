@@ -10,7 +10,7 @@ import core.uarch.interfaces._
 import core.uarch.fu.CSRCtrl
 import core.isa.csr.{HasCSRConst, HasExceptionNO}
 
-class CSRIO extends FuCtrlIO {
+class CSRIO(implicit val p: MarCoreConfig) extends FuCtrlIO {
   val cfIn = Flipped(new CtrlFlowIO)
   val redirect = new RedirectIO
   // for exception check
@@ -28,6 +28,7 @@ class CSRIO extends FuCtrlIO {
 }
 
 trait HasCSRIO {
+  implicit val p: MarCoreConfig
   val io = IO(new CSRIO)
 
   val (valid, srcA, srcB, ctrl) =

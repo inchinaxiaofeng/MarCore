@@ -8,17 +8,16 @@ import bus.cacheBus._
 import core.frontend.fu._
 import defs._
 import utils._
-import config.ISAConfig
-import config.BaseConfig
 import core.uarch.branch.BPUUpdate
 import core.uarch.interfaces.CtrlFlowIO
 import core.isa.csr.HasExceptionNO
 
 trait HasResetVector {
-  val resetVector = ISAConfig.getLong("ResetVector")
+  implicit val p: MarCoreConfig
+  def resetVector = p.System.resetVector
 }
 
-class IFU_inorder
+class IFU_inorder(implicit val p: MarCoreConfig)
     extends MarCoreModule
     with HasResetVector
     with HasExceptionNO {
@@ -121,7 +120,7 @@ class IFU_inorder
   io.out.valid := io.imem.resp.valid && !io.flushVec(0)
   // <\green>
 
-  if (BaseConfig.get("LogIFU")) {
+  if (p.Log.LogIFU) {
     Debug(
       io.imem.req.fire,
       "[IFI] pc %x redirect %x npc %x pc %x pnpc %x\n",
@@ -148,7 +147,9 @@ class IFU_inorder
   }
 }
 
-class IFU_embedded extends MarCoreModule with HasResetVector {
+class IFU_embedded(implicit val p: MarCoreConfig)
+    extends MarCoreModule
+    with HasResetVector {
   implicit val moduleName: String = this.name
   val io = IO(new Bundle {
     val imem =
@@ -213,7 +214,7 @@ class IFU_embedded extends MarCoreModule with HasResetVector {
   }
   io.out.valid := io.imem.resp.valid && !io.flushVec(0)
 
-  if (BaseConfig.get("LogIFU")) {
+  if (p.Log.LogIFU) {
     Debug(
       io.imem.req.fire,
       "[IFI] pc=%x redirect %x npc %x pc %x pnpc %x\n",

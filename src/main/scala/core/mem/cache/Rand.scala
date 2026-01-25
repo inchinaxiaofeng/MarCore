@@ -6,7 +6,6 @@ import chisel3.util._
 import defs._
 import utils._
 import bus.cacheBus._
-import config.BaseConfig
 
 sealed trait HasRandConst extends HasCacheConst {
   def CacheMetaArrayReadBus() =
@@ -61,7 +60,7 @@ sealed class RandCacheStage1(implicit val cacheConfig: CacheConfig)
   io.in.ready := (!io.in.valid || io.out.fire) && io.metaReadBus.req.ready && io.dataReadBus.req.ready
 
   // ==== Log ====
-  if (BaseConfig.get("LogCache")) {
+  if (p.Log.LogCache) {
     Trace(
       io.in.fire,
       "[L1#]\n [CTRL]\tsize 0x%x write %b\n [RW]\taddr 0x%x len 0x%x\n [WO]\tdata 0x%x strb 0b%b last %b\n",
@@ -191,7 +190,7 @@ sealed class RandCacheStage2(implicit val cacheConfig: CacheConfig)
   io.out.bits.hit := hit
   io.out.bits.waymask := waymask
   io.out.bits.datas := io.dataReadResp
-  io.out.bits.mmio := AddressSpace.isMMIO(req.addr)
+  io.out.bits.mmio := cacheConfig.sysConfig.isMMIO(req.addr)
 
   val isForwardData = io.in.valid && (io.dataWriteBus.req match {
     case r =>
@@ -213,7 +212,7 @@ sealed class RandCacheStage2(implicit val cacheConfig: CacheConfig)
   io.in.ready := !io.in.valid || io.out.fire
 
   // ==== Log ====
-  if (BaseConfig.get("LogCache")) {
+  if (p.Log.LogCache) {
     Trace(
       io.in.fire,
       "[L2#]\n [CTRL]\tsize 0x%x write %b\n [RW]\taddr 0x%x len 0x%x\n [WO]\tdata 0x%x strb 0b%b last %b\n",

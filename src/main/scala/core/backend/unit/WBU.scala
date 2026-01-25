@@ -5,7 +5,6 @@ import chisel3.util._
 
 import defs._
 import utils._
-import config.BaseConfig
 import core.uarch.interfaces._
 
 class WBU(implicit val p: MarCoreConfig) extends MarCoreModule {
@@ -33,7 +32,7 @@ class WBU(implicit val p: MarCoreConfig) extends MarCoreModule {
   io.redirect.rtype := io.in.bits.decode.cf.redirect.rtype
   io.redirect.valid := io.in.bits.decode.cf.redirect.valid && io.in.valid
 
-  if (BaseConfig.get("LogWBU"))
+  if (p.Log.LogWBU)
     Debug(
       io.in.valid,
       "[COMMIT] pc = 0x%x inst %x wen %x wdst %x wdata %x mmio %x intrNO %x\n",

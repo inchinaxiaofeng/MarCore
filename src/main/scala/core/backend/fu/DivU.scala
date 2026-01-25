@@ -20,7 +20,7 @@ import utils._
 import utils.fu._
 import core.uarch.fu.{DivUCtrl}
 
-class DivU extends MarCoreFuModule {
+class DivU(implicit val p: MarCoreConfig) extends MarCoreFuModule {
   implicit val moduleName: String = this.name
 
   val isRem = DivUCtrl.isRem(ctrl)

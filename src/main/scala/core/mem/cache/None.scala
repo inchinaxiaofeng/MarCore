@@ -6,7 +6,6 @@ import chisel3.util._
 import defs._
 import utils._
 import bus.cacheBus._
-import config.BaseConfig
 
 private[cache] class NoneCache(implicit val cacheConfig: CacheConfig)
     extends CacheModule {
@@ -15,7 +14,7 @@ private[cache] class NoneCache(implicit val cacheConfig: CacheConfig)
     Enum(6)
   val state = RegInit(s_idle)
 
-  val ismmio = AddressSpace.isMMIO(io.in.req.bits.addr)
+  val ismmio = cacheConfig.sysConfig.isMMIO(io.in.req.bits.addr)
   val ismmioRec = RegEnable(ismmio, io.in.req.fire)
   // if (cacheConfig.name == "dacache") {
   //   BoringUtils.addSource(WireInit(ismmio), "lsumMMIO")
@@ -98,7 +97,7 @@ private[cache] class NoneCache(implicit val cacheConfig: CacheConfig)
 
   io.empty := false.B
 
-  if (BaseConfig.get("LogCache")) {
+  if (p.Log.LogCache) {
     Debug(io.in.req.fire, p"in.req: ${io.in.req.bits}\n")
     Debug(io.mem.req.fire, p"mem.req: ${io.mem.req.bits}\n")
     Debug(io.mem.resp.fire, p"mem.resp: ${io.mem.resp.bits}\n")

@@ -1,4 +1,4 @@
-package core.mem.ram
+package top.io
 
 import chisel3._
 import chisel3.util._
@@ -7,34 +7,28 @@ import bus.axi4._
 import defs._
 import utils._
 
-// Can't Change In YSYX
-class MEM extends BlackBox {
-  val io = IO(new Bundle {
-    val clk = Input(Clock())
-    val rst = Input(Bool())
-    val iRen = Input(Bool())
-    val iWen = Input(Bool())
-    val iReadAddr = Input(UInt(32.W))
-    val iWriteAddr = Input(UInt(32.W))
-    val iByteMask = Input(UInt(8.W))
-    val iWriteData = Input(UInt(64.W))
-    val oReadData = Output(UInt(64.W))
-  })
+class MEMIO extends MarCoreBundle {
+  // val clk = Input(Clock())
+  // val rst = Input(Bool())
+  val iRen = Input(Bool())
+  val iWen = Input(Bool())
+  val iReadAddr = Input(UInt(32.W))
+  val iWriteAddr = Input(UInt(32.W))
+  val iByteMask = Input(UInt(8.W)) // FIXME: 位宽有问题
+  val iWriteData = Input(UInt(XLEN.W))
+  val oReadData = Output(UInt(XLEN.W))
 }
 
-class TP_SRAM(cnt: Int) extends MarCoreModule {
+class AXI4ToMemConverter(cnt: Int) extends MarCoreModule {
   implicit val moduleName: String = this.name
   val io = IO(Flipped(new AXI4))
+  val mem = IO(new MEMIO())
   assert(
     !io.ar.valid || (io.ar.bits.burst === AXI4Parameters.BURST_WRAP && (io.ar.bits.len === 1.U | io.ar.bits.len === 3.U | io.ar.bits.len === 7.U | io.ar.bits.len === 15.U))
   )
   assert(
     !io.aw.valid || (io.aw.bits.burst === AXI4Parameters.BURST_WRAP && (io.aw.bits.len === 1.U | io.aw.bits.len === 3.U | io.aw.bits.len === 7.U | io.aw.bits.len === 15.U))
   )
-
-  val mem = Module(new MEM())
-  mem.io.clk := clock
-  mem.io.rst := reset
 
   val s_idle :: s_exec :: Nil = Enum(2)
   val readBeatCnt = Counter(cnt)
@@ -163,22 +157,22 @@ class TP_SRAM(cnt: Int) extends MarCoreModule {
   val iByteMask = RegEnable(io.w.bits.strb, 0.U, io.w.valid)
 
   /* Just push the data to SRAM and use enable signal control */
-  mem.io.iReadAddr := MuxLookup(rBurstType, rIncAddr)(
+  mem.iReadAddr := MuxLookup(rBurstType, rIncAddr)(
     Seq(
       AXI4Parameters.BURST_INCR -> rIncAddr,
       AXI4Parameters.BURST_WRAP -> rWrapAddr,
       AXI4Parameters.BURST_FIXED -> rAddr
     )
   )
-  mem.io.iWriteAddr := MuxLookup(wBurstType, wIncAddr)(
+  mem.iWriteAddr := MuxLookup(wBurstType, wIncAddr)(
     Seq(
       AXI4Parameters.BURST_INCR -> wIncAddr,
       AXI4Parameters.BURST_WRAP -> wWrapAddr,
       AXI4Parameters.BURST_FIXED -> wAddr
     )
   )
-  mem.io.iWriteData := iWriteData
-  mem.io.iByteMask := iByteMask
+  mem.iWriteData := iWriteData
+  mem.iByteMask := iByteMask
 
   Debug("RAddr%x WAddr%x\n", rAddr, wAddr)
 
@@ -186,7 +180,7 @@ class TP_SRAM(cnt: Int) extends MarCoreModule {
   // Immediately ready
   io.w.ready := state_store === s_idle
   io.aw.ready := state_store === s_idle
-  mem.io.iWen := state_store === s_exec
+  mem.iWen := state_store === s_exec
   io.b.valid := state_store === s_exec
   // if not ready, anything can be resp
   io.b.bits.apply(
@@ -199,11 +193,11 @@ class TP_SRAM(cnt: Int) extends MarCoreModule {
   /* Read */
   // Immediately ready
   io.ar.ready := state_load === s_idle
-  mem.io.iRen := state_load === s_exec
+  mem.iRen := state_load === s_exec
   io.r.valid := state_load === s_exec
   // if not ready, anything can be resp
   io.r.bits.apply(
-    data = mem.io.oReadData,
+    data = mem.oReadData,
     resp =
       Mux(io.r.ready, AXI4Parameters.RESP_OKAY, AXI4Parameters.RESP_SLVERR),
     user = 0.U,

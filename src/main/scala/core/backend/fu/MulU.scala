@@ -19,11 +19,10 @@ import defs._
 import utils._
 import utils.fu._
 import top.Settings
-import config.BaseConfig
 
 import core.uarch.fu.MulUCtrl
 
-class MulU extends MarCoreFuModule {
+class MulU(implicit val p: MarCoreConfig) extends MarCoreFuModule {
   implicit val moduleName: String = this.name
 
   val isHigh = MulUCtrl.isHigh(ctrl)
@@ -82,7 +81,7 @@ class MulU extends MarCoreFuModule {
   io.out.valid := s2_valid
 
   // ==== LogOut ====
-  if (BaseConfig.get("LogMulU")) {
+  if (p.Log.LogMulU) {
     Trace(s"stage valid $s0_valid$s1_valid$s2_valid\n")
     Debug(
       io.in.fire,

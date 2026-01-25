@@ -10,10 +10,16 @@ import top.Settings
 import bus.cacheBus._
 import bus.debugBus.{DebugBus}
 import config._
-import config.CacheReplacePolicy
 import scala.annotation.meta.param
 
+import config.SystemConfig
+
 // ==== 配置与常数 ====
+
+sealed trait ReplacementPolicy
+case object NonePolicy extends ReplacementPolicy
+case object LRUPolicy extends ReplacementPolicy
+case object RandPolicy extends ReplacementPolicy
 
 /** 可修改定义信息(在生成的时候请选定)
   *
@@ -36,6 +42,10 @@ import scala.annotation.meta.param
   *   Cache 行大小, 单位 byte
   * @param beatSize
   *   传输拍大小, 当对更低Cache或外部传递数据时, 每一拍最大传输数据量, byte为单位
+  * @param sysConfig
+  *   传递MMIO相关设置
+  * @param policy
+  *   指定Cache替换策略
   */
 case class CacheConfig(
     ro: Boolean = false,
@@ -46,7 +56,9 @@ case class CacheConfig(
     cacheSize: Int = 2, // Kbytes
     ways: Int = 4,
     lineSize: Int = 32, // byte
-    beatSize: Int = 8 // byte Transfer width
+    beatSize: Int = 8, // byte Transfer width
+    sysConfig: SystemConfig,
+    policy: ReplacementPolicy
 )
 
 /** Cache 常量计算与规定
@@ -185,9 +197,9 @@ object Cache {
       empty: Bool,
       enable: Boolean = true
   )(implicit cacheConfig: CacheConfig) = {
-    val cache = BaseConfig.cache match {
-      case CacheReplacePolicy.NONE => Module(new NoneCache)
-      case CacheReplacePolicy.RAND => Module(new RandCache)
+    val cache = cacheConfig.policy match {
+      case NonePolicy => Module(new NoneCache)
+      case RandPolicy => Module(new RandCache)
       case other =>
         throw new IllegalArgumentException(
           s"Unknown or unsupport cache policy: $other"

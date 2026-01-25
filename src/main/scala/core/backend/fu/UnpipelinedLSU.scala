@@ -8,11 +8,10 @@ import defs._
 import utils._
 import bus.cacheBus._
 import coursier.util.Config
-import config.BaseConfig
 import core.uarch.interfaces.FuCtrlIO
 import core.uarch.fu.LSUCtrl
 
-class UnpipeLSUIO extends FuCtrlIO {
+class UnpipeLSUIO(implicit val p: MarCoreConfig) extends FuCtrlIO {
   val wdata = Input(UInt(XLEN.W))
   val instr = Input(UInt(32.W)) // Atom insts need aq rl funct3 bit from instr
   val dmem = new CacheBus(addrBits = VAddrBits)
@@ -26,7 +25,9 @@ class UnpipeLSUIO extends FuCtrlIO {
   *
   * 通過操控碼的設計, 將實現與架構分離
   */
-class UnpipelinedLSU extends MarCoreModule with HasLSUConst {
+class UnpipelinedLSU(implicit val p: MarCoreConfig)
+    extends MarCoreModule
+    with HasLSUConst {
   implicit val moduleName: String = this.name
   val io = IO(new UnpipeLSUIO)
   val (valid, srcA, srcB, ctrl) =
@@ -127,7 +128,7 @@ class UnpipelinedLSU extends MarCoreModule with HasLSUConst {
     io.in.ready := true.B
   }
 
-  if (BaseConfig.get("LogLSU"))
+  if (p.Log.LogLSU)
     Debug(
       io.out.fire,
       "[LSU-AGU] state %x inv %x inr %x\n",
@@ -149,7 +150,7 @@ class UnpipelinedLSU extends MarCoreModule with HasLSUConst {
 }
 
 // 具体操作LS行为的模型
-class LSExecUnit extends MarCoreModule {
+class LSExecUnit(implicit val p: MarCoreConfig) extends MarCoreModule {
   implicit val moduleName: String = this.name
   val io = IO(new UnpipeLSUIO)
 
@@ -223,7 +224,7 @@ class LSExecUnit extends MarCoreModule {
     is(s_partialLoad) { state := s_idle }
   }
 
-  if (BaseConfig.get("LogLSU"))
+  if (p.Log.LogLSU)
     Debug(
       dmem.req.fire,
       "[LSU] addr %x, size %x, wdata_raw %x, isStore %x\n",
@@ -263,7 +264,7 @@ class LSExecUnit extends MarCoreModule {
   )
   io.in.ready := state === s_idle
 
-  if (BaseConfig.get("LogLSU"))
+  if (p.Log.LogLSU)
     Debug(
       io.out.fire,
       "[LSU-EXECUNIT] state %x Resp %x lm %x sm %x\n",
@@ -322,7 +323,7 @@ class LSExecUnit extends MarCoreModule {
     )
   )
 
-  if (BaseConfig.get("LogLSU"))
+  if (p.Log.LogLSU)
     Debug(
       dmem.req.ready && dmem.resp.ready,
       "[LSU] state %x Write %x ReqAddr %x Fire %x Data %x AddrLatch %x RDataLatch %x RDataPartialLoad %x\n",
@@ -341,7 +342,7 @@ class LSExecUnit extends MarCoreModule {
   io.ioLoadAddrMisaligned := valid && !isStore && !addrAligned
   io.ioStoreAddrMisaligned := valid && isStore && !addrAligned
 
-  if (BaseConfig.get("LogLSU"))
+  if (p.Log.LogLSU)
     Debug(
       io.ioLoadAddrMisaligned || io.ioStoreAddrMisaligned,
       "[EXCEPTION] misaligned addr detected\n"

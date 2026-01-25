@@ -15,15 +15,14 @@ import chisel3.stage._
 import java.nio.file.{Files, Path}
 import core.backend.fu._
 import core.mem.cache.Cache
+import top.sim.pure.PureSimTop32
 
 /** `mill MarCore.runMain Elaborate` to run this.
   */
 object Elaborate extends App {
   // 1) 在这里列出所有要生成的（模块名，输出目录）对
   val jobs = Seq(
-    ("ALU", "build/core/backend/fu/ALU"),
-    ("BRU", "build/core/backend/fu/BRU"),
-    ("MulU", "build/core/backend/fu/MulU"),
+    ("PureSim", "build/top/pure"),
     ("NoneCache", "build/core/cache/NoneCache")
     // 如果还有其他 top，就继续加：
     // ("YourTop", "out/yourtop")
@@ -31,9 +30,10 @@ object Elaborate extends App {
 
   // 2) 根据名字返回一个 Generator 函数
   def makeGen(name: String): () => RawModule = name match {
-    case "ALU" => () => new ALU()
-    case "BRU" => () => new BRU()
-    case "MulU" => () => new MulU()
+    case "PureSim" =>
+      () =>
+        new PureSimTop32()
+      // case "ALU" => () => new ALU()
     // case "YourTop"     => () => new YourTop()
     case other => throw new IllegalArgumentException(s"Unknown top: $other")
   }

@@ -25,7 +25,7 @@ import core.uarch.interfaces._
 import core.uarch.fu.BRUCtrl
 import core.uarch.branch.BPUUpdate
 
-class BRUIO extends FuCtrlIO {
+class BRUIO(implicit val p: MarCoreConfig) extends FuCtrlIO {
   val cfIn = Flipped(new CtrlFlowIO)
 
   /** 用於在錯誤發生時進行重定向
@@ -44,7 +44,7 @@ class BRUIO extends FuCtrlIO {
   *
   * 評估後認爲在公版中提供支持會降低代碼可讀性, 因此在此不支持.
   */
-class BRU extends MarCoreModule {
+class BRU(implicit val p: MarCoreConfig) extends MarCoreModule {
   implicit val moduleName: String = this.name
   val io = IO(new BRUIO)
 
@@ -118,7 +118,7 @@ class BRU extends MarCoreModule {
   io.out.valid := valid
 
   // ==== LogOut ====
-  if (BaseConfig.get("LogALU")) {
+  if (p.Log.LogBRU) {
     Debug(
       io.in.fire,
       "[In  Fire] tgt %x valid %d npc %x pdwrong %x\n",

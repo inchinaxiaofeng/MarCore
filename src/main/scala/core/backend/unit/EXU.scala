@@ -138,7 +138,7 @@ class EXU(implicit val p: MarCoreConfig)
   io.out.bits.decode.cf.redirect :=
     Mux(csr.io.redirect.valid, csr.io.redirect, bru.io.redirect)
 
-  if (BaseConfig.get("LogEXU"))
+  if (p.Log.LogEXU)
     Debug(
       csr.io.redirect.valid || bru.io.redirect.valid,
       "[REDIRECT] flush: %d csr (%b,%x) alu (%b,%x)\n",
@@ -165,7 +165,7 @@ class EXU(implicit val p: MarCoreConfig)
   io.out.bits.commits(FuType.csr) := csrOut
   io.out.bits.commits(FuType.mou) := 0.U
 
-  if (BaseConfig.get("LogEXU"))
+  if (p.Log.LogEXU)
     Debug(
       io.out.fire,
       "[FIRE] FuType %x alu %x bru %x lsu %x mulu %x divu %x csr %x\n",

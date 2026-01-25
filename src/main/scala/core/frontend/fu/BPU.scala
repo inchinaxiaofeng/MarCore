@@ -17,7 +17,8 @@ import core.isa.{FuCtrl, FuType}
 // TODO 竞争的分支预测：CPHT
 
 // 表示地址的数据结构，并定义了一些方法辅助操作和获取地址字段的值。
-class TableAddr(val idxBits: Int) extends MarCoreBundle {
+class TableAddr(val idxBits: Int)(implicit val p: MarCoreConfig)
+    extends MarCoreBundle {
   // 填充字段位宽
   val padLen =
     if (Settings.get("IsRV32") || !Settings.get("EnableOutOfOrderExec")) 2
@@ -39,7 +40,7 @@ class TableAddr(val idxBits: Int) extends MarCoreBundle {
  * xxxx_xxxx_xxxx_xxxx_xxxx_xxxx_xxxx_xxxx_xxxx_xxxx_xxxx_xxxx_xxxx_xxxx_xxxx_xxxx
  */
 
-class BPU_embedded extends MarCoreModule {
+class BPU_embedded(implicit val p: MarCoreConfig) extends MarCoreModule {
   val io = IO(new Bundle {
     val in = new Bundle { val pc = Flipped(Valid(UInt(VAddrBits.W))) }
     val out = new RedirectIO
@@ -215,7 +216,7 @@ class BPU_embedded extends MarCoreModule {
   // }
 }
 
-class BPU_inorder extends MarCoreModule {
+class BPU_inorder(implicit val p: MarCoreConfig) extends MarCoreModule {
   val io = IO(new Bundle {
     val in = new Bundle { val pc = Flipped(Valid(UInt(VAddrBits.W))) }
     val out = new RedirectIO

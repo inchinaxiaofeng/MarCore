@@ -25,7 +25,7 @@ import core.isa.csr.{HasExceptionNO, HasCSRConst}
 
 /** DecodeIO Bundle
   */
-class DeIO extends MarCoreBundle {
+class DeIO(implicit val p: MarCoreConfig) extends MarCoreBundle {
   val in = Flipped(Decoupled(new CtrlFlowIO))
   val out = Decoupled(new DecodeIO)
   val isWFI = Output(Bool())
@@ -35,6 +35,7 @@ class DeIO extends MarCoreBundle {
 /** 解码单元公共接口
   */
 trait HasDeIO {
+  implicit val p: MarCoreConfig
   val io = IO(new DeIO)
 }
 

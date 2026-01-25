@@ -13,9 +13,7 @@ import core.uarch.interfaces.{DecodeIO, WriteBackIO, ForwardIO}
 import core.isa.{FuType, SrcType}
 
 // Sequential Inst Issue Unit
-class ISU(implicit val p: MarCoreConfig)
-    extends MarCoreModule
-    with HasRegFileParameter {
+class ISU(implicit val p: MarCoreConfig) extends MarCoreModule {
   implicit val moduleName: String = this.name
   val io = IO(new Bundle {
     val in = Vec(

@@ -10,30 +10,6 @@ import settings._
 import utils.HasColor
 import core.isa.csr.HasExceptionNO
 
-/** MarCore通用參數
-  */
-trait HasMarCoreParameter {
-  private val xlen = ISAConfig.getT[XLen.Value]("XLen")
-
-  /** 機器字長 */
-  val XLEN = xlen match {
-    case XLen._32 => 32
-    case XLen._64 => 64
-  }
-  val AddrBits = XLEN // 芯片内使用
-  val DataBits = XLEN
-  val DataBytes = DataBits / 8
-
-  val VAddrBits = XLEN // Based on 分页
-  val PAddrBits = 32 // PAddrBits is Physical Memory address bits
-
-  val HasICache = BaseConfig.get("HasICache")
-  val HasDCache = BaseConfig.get("HasDCache")
-
-  val EnableMultiIssue = Settings.get("EnableMultiIssue")
-  val EnableOutOfOrderExec = Settings.get("EnableOutOfOrderExec")
-}
-
 /** 全局使用的配置選項。
   *
   * 當實例化需要提供配置選項的模塊的時候，需要手動生成一個配置表，傳遞需要實例化的模塊。
@@ -52,13 +28,14 @@ trait HasMarCoreParameter {
   *   啓用增強Log之後，將會向代碼中添加格式化的輸出內容。
   */
 case class MarCoreConfig(
+    ISA: ISAConfig,
+    System: SystemConfig,
+    Log: LogConfig,
+    Mem: MemConfig,
+    Stat: StatConfig,
+    Core: CoreConfig,
     FPGAPlatform: Boolean = true,
-    EnableDebug: Boolean = BaseConfig.top match {
-      case TopType.ChipLab  => false
-      case TopType.YosysSTA => false
-      case TopType.SimCore  => true
-      case TopType.SimSoC   => false
-    },
+    EnableDebug: Boolean = false,
     EnhancedLog: Boolean = true
 )
 
@@ -69,6 +46,7 @@ abstract class MarCoreModule
     with HasExceptionNO
     with HasBackendConst
     with HasColor
+
 abstract class MarCoreBundle
     extends Bundle
     with HasMarCoreParameter
@@ -76,4 +54,3 @@ abstract class MarCoreBundle
     with HasExceptionNO
     with HasBackendConst
     with HasColor
-    with __HasFU
