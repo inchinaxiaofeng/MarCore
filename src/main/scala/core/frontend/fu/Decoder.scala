@@ -22,6 +22,7 @@ import core.isa.{HasInstrType, Instructions, FuType, SrcType}
 import core.uarch.fu.{ALUCtrl, BRUCtrl, LSUCtrl}
 import core.uarch.interfaces._
 import core.isa.csr.{HasExceptionNO, HasCSRConst}
+import core.isa.instr.RV32I_BRUInstr
 
 /** DecodeIO Bundle
   */
@@ -182,9 +183,9 @@ class Decoder(implicit val p: MarCoreConfig)
   ) := (instrType === InstrN && !hasIntr) && io.in.valid
 
   // io.out.bits.ctrl.isMarCoreTrap := (instr === MarCoreTrap.TRAP) && io.in.valid
-  // io.isWFI := (instr === Priviledged.WFI) && io.in.valid // 冻结芯片
-  // io.isBranch := VecInit(
-  //   RV32I_BRUInstr.table.map(i => i._2.tail(1) === fuCtrl).toIndexedSeq
-  // ).asUInt.orR &&
-  //   fuType === FuType.bru
+  io.isWFI := false.B // (instr === Priviledged.WFI) && io.in.valid // 冻结芯片
+  io.isBranch := VecInit(
+    RV32I_BRUInstr.table.map(i => i._2.tail(1) === fuCtrl).toIndexedSeq
+  ).asUInt.orR &&
+    fuType === FuType.bru
 }

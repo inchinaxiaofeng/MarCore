@@ -278,29 +278,31 @@ class LSExecUnit(implicit val p: MarCoreConfig) extends MarCoreModule {
   val rdataLatch = RegNext(rdata)
   // 在这里，因为地址为0x800002b4，后三位的读取为100
   // 所以截取了(63, 32)，使得0x00000001成为了0x0000____
-  val rdataSel64 = LookupTree(
-    addrLatch(2, 0),
-    List(
-      "b000".U -> rdataLatch(63, 0),
-      "b001".U -> rdataLatch(63, 8),
-      "b010".U -> rdataLatch(63, 16),
-      "b011".U -> rdataLatch(63, 24),
-      "b100".U -> rdataLatch(63, 32),
-      "b101".U -> rdataLatch(63, 40),
-      "b110".U -> rdataLatch(63, 48),
-      "b111".U -> rdataLatch(63, 56)
+  val rdataSel = if (XLEN == 32) {
+    LookupTree(
+      addrLatch(1, 0),
+      List(
+        "b00".U -> rdataLatch(31, 0),
+        "b01".U -> rdataLatch(31, 8),
+        "b10".U -> rdataLatch(31, 16),
+        "b11".U -> rdataLatch(31, 24)
+      )
     )
-  )
-  val rdataSel32 = LookupTree(
-    addrLatch(1, 0),
-    List(
-      "b00".U -> rdataLatch(31, 0),
-      "b01".U -> rdataLatch(31, 8),
-      "b10".U -> rdataLatch(31, 16),
-      "b11".U -> rdataLatch(31, 24)
+  } else {
+    LookupTree(
+      addrLatch(2, 0),
+      List(
+        "b000".U -> rdataLatch(63, 0),
+        "b001".U -> rdataLatch(63, 8),
+        "b010".U -> rdataLatch(63, 16),
+        "b011".U -> rdataLatch(63, 24),
+        "b100".U -> rdataLatch(63, 32),
+        "b101".U -> rdataLatch(63, 40),
+        "b110".U -> rdataLatch(63, 48),
+        "b111".U -> rdataLatch(63, 56)
+      )
     )
-  )
-  val rdataSel = if (XLEN == 32) rdataSel32 else rdataSel64
+  }
   // NOTE: 在这里，使用rdataLatch的情况是：不存在Cache，其访存返回的已经是截好的数据；如果是XLEN直接返回，则使用rdataSel32/rdtataSel64
   val rdataPartialLoad = LookupTree(
     ctrl,

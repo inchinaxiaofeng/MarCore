@@ -22,22 +22,6 @@ class Backend_inorder(implicit val p: MarCoreConfig) extends MarCoreModule {
     val dmem = new CacheBus
     val redirect = new RedirectIO
     val bpuUpdate = new BPUUpdate
-    // DiffTest
-    val gpr =
-      if (Settings.get("EnableDifftest") && Settings.get("DiffTestGPR"))
-        Some(new RegsDiffIO(num = 32))
-      else None
-    val csr =
-      if (Settings.get("EnableDifftest") && Settings.get("DiffTestCSR"))
-        Some(new RegsDiffIO(num = 4))
-      else None
-    val difftest_commit =
-      if (Settings.get("EnableDifftest")) Some(Decoupled(new CommitIO))
-      else None
-    val difftest_redirect =
-      if (Settings.get("EnableDifftest")) Some(new RedirectIO) else None
-    val difftest_instr =
-      if (Settings.get("EnableDifftest")) Some(Output(UInt(XLEN.W))) else None
   })
 
   val isu = Module(new ISU)
@@ -93,20 +77,4 @@ class Backend_inorder(implicit val p: MarCoreConfig) extends MarCoreModule {
     wbu.io.in.bits.decode.cf.pnpc
   )
 
-  // if (Settings.get("EnableDifftest")) {
-  //   if (Settings.get("DiffTestGPR")) io.gpr.get <> isu.io.gpr.get
-  //   if (Settings.get("DiffTestCSR")) io.csr.get <> RegNext(exu.io.csr.get)
-  //   io.difftest_commit.get <> wbu.io.difftest_commit.get
-  //   io.difftest_instr.get <> wbu.io.difftest_instr.get
-  //   io.difftest_redirect.get <> wbu.io.difftest_redirect.get
-  // }
-
-  if (Settings.get("Statistic")) {
-    val statistic_back_hunger = Module(new STATISTIC_BACK_HUNGER)
-    statistic_back_hunger.io.clk := clock
-    statistic_back_hunger.io.rst := reset
-    statistic_back_hunger.io.isu_hunger := !isu.io.in(0).valid
-    statistic_back_hunger.io.exu_hunger := !exu.io.in.valid
-    statistic_back_hunger.io.wbu_hunger := !wbu.io.in.valid
-  }
 }

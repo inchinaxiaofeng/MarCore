@@ -50,7 +50,7 @@ object SrcType {
   *     - 據此我將MUL和DIV分開設計.
   */
 object FuType extends HasMarCoreConst {
-  def num = 5
+  def num = 6
   def alu = "b000".U
   def bru = "b001".U
   def lsu = "b010".U

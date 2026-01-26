@@ -22,18 +22,14 @@ import top.sim.pure.PureSimTop32
 object Elaborate extends App {
   // 1) 在这里列出所有要生成的（模块名，输出目录）对
   val jobs = Seq(
-    ("PureSim", "build/top/pure"),
-    ("NoneCache", "build/core/cache/NoneCache")
+    ("PureSim", "build/top/pure")
     // 如果还有其他 top，就继续加：
     // ("YourTop", "out/yourtop")
   )
 
   // 2) 根据名字返回一个 Generator 函数
   def makeGen(name: String): () => RawModule = name match {
-    case "PureSim" =>
-      () =>
-        new PureSimTop32()
-      // case "ALU" => () => new ALU()
+    case "PureSim" => () => new PureSimTop32()
     // case "YourTop"     => () => new YourTop()
     case other => throw new IllegalArgumentException(s"Unknown top: $other")
   }
