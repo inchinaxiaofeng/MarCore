@@ -93,7 +93,7 @@ class BRU(implicit val p: MarCoreConfig) extends MarCoreModule {
 
   // 當實際計算出的地址與預測地址不一致時, 預測錯誤
   io.redirect.valid := valid && predictWrong
-  val redirectRtype = if (EnableOutOfOrderExec) 1.U else 0.U
+  val redirectRtype = if (p.Core.EnableOutOfOrderExec) 1.U else 0.U
   io.redirect.rtype := redirectRtype
   io.redirect.target := Mux(!taken && isBranch, starget, target)
 

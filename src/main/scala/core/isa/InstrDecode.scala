@@ -12,7 +12,7 @@ import core.isa.instr.{RVIInstr, RVMInstr, RVZicsrInstr, Priviledged}
   *
   * 当混入这个特性时, 将会获得指令类型定义
   */
-trait HasInstrType extends HasMarCoreParameter {
+trait HasInstrType {
   def InstrN = "b0000".U
   def InstrI = "b0100".U
   def InstrR = "b0101".U

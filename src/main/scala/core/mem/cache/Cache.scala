@@ -58,7 +58,8 @@ case class CacheConfig(
     lineSize: Int = 32, // byte
     beatSize: Int = 8, // byte Transfer width
     sysConfig: SystemConfig,
-    policy: ReplacementPolicy
+    policy: ReplacementPolicy,
+    log: Boolean = false // 用于控制是否打印Log信息
 )
 
 /** Cache 常量计算与规定

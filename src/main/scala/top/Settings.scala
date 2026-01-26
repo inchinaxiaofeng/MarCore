@@ -2,7 +2,6 @@ package top
 
 import scala.annotation.meta.field
 import top._
-import top.sta._
 
 //case class ElabMode(name:String, module:chisel3.RawModule)
 case class VGAMode(

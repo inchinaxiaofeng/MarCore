@@ -7,10 +7,8 @@ import utils._
 import defs._
 import bus.cacheBus._
 import config._
-
 import core.uarch.branch.BPUUpdate
 import core.backend.fu._
-import core.cache._
 import core.uarch.interfaces.{DecodeIO, CommitIO, ForwardIO}
 import core.isa.FuType
 import core.isa.csr.HasExceptionNO

@@ -60,7 +60,7 @@ sealed class RandCacheStage1(implicit val cacheConfig: CacheConfig)
   io.in.ready := (!io.in.valid || io.out.fire) && io.metaReadBus.req.ready && io.dataReadBus.req.ready
 
   // ==== Log ====
-  if (p.Log.LogCache) {
+  if (cacheConfig.log) {
     Trace(
       io.in.fire,
       "[L1#]\n [CTRL]\tsize 0x%x write %b\n [RW]\taddr 0x%x len 0x%x\n [WO]\tdata 0x%x strb 0b%b last %b\n",
@@ -212,7 +212,7 @@ sealed class RandCacheStage2(implicit val cacheConfig: CacheConfig)
   io.in.ready := !io.in.valid || io.out.fire
 
   // ==== Log ====
-  if (p.Log.LogCache) {
+  if (cacheConfig.log) {
     Trace(
       io.in.fire,
       "[L2#]\n [CTRL]\tsize 0x%x write %b\n [RW]\taddr 0x%x len 0x%x\n [WO]\tdata 0x%x strb 0b%b last %b\n",
@@ -639,7 +639,6 @@ class RandCache(implicit val cacheConfig: CacheConfig)
   s2.io.metaWriteBus := s3.io.metaWriteBus
   s2.io.dataWriteBus := s3.io.dataWriteBus
 
-  if (EnableOutOfOrderExec) {}
   Debug(
     "{IN: s1:(%d,%d) s2:(%d,%d) s3:(%d,%d)} {OUT: s1:(%d,%d) s2:(%d,%d) s3:(%d,%d)}\n",
     s1.io.in.valid,

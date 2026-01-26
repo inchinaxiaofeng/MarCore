@@ -97,7 +97,7 @@ private[cache] class NoneCache(implicit val cacheConfig: CacheConfig)
 
   io.empty := false.B
 
-  if (p.Log.LogCache) {
+  if (cacheConfig.log) {
     Debug(io.in.req.fire, p"in.req: ${io.in.req.bits}\n")
     Debug(io.mem.req.fire, p"mem.req: ${io.mem.req.bits}\n")
     Debug(io.mem.resp.fire, p"mem.resp: ${io.mem.resp.bits}\n")

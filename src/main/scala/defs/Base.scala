@@ -6,7 +6,6 @@ import chisel3.util._
 import chisel3.util.experimental.BoringUtils
 
 import config._
-import settings._
 import utils.HasColor
 import core.isa.csr.HasExceptionNO
 
@@ -28,7 +27,6 @@ import core.isa.csr.HasExceptionNO
   *   啓用增強Log之後，將會向代碼中添加格式化的輸出內容。
   */
 case class MarCoreConfig(
-    ISA: ISAConfig,
     System: SystemConfig,
     Log: LogConfig,
     Mem: MemConfig,

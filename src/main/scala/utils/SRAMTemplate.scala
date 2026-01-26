@@ -2,7 +2,6 @@ package utils
 
 import chisel3._
 import chisel3.util._
-import module.cache._
 
 class SRAMBundleA(val set: Int) extends Bundle {
   val setIdx = Output(UInt(log2Up(set).W))

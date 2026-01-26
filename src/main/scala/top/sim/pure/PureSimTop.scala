@@ -23,7 +23,6 @@ import top.io.AXI4ToMemConverter
 class PureSimTop32 extends Module {
   lazy val config = MarCoreConfig(
     FPGAPlatform = false,
-    ISA = ISAConfig(baseType = RV32E),
     System = SystemConfig(resetVector = 0x0L, mmio = Seq()),
     Log = LogConfig(),
     Mem = MemConfig(),

@@ -17,13 +17,13 @@ class IDU(implicit val p: MarCoreConfig) extends MarCoreModule {
     val out = Vec(2, Decoupled(new DecodeIO))
   })
 
-  val (decoder1, decoder2) = (new Decoder, new Decoder)
+  val (decoder1, decoder2) = (Module(new Decoder), Module(new Decoder))
   io.in(0) <> decoder1.io.in
   io.in(1) <> decoder2.io.in
   io.out(0) <> decoder1.io.out
   io.out(1) <> decoder2.io.out
   // 覆蓋
-  if (!EnableMultiIssue) {
+  if (!p.Core.EnableMultiIssue) {
     io.in(1).ready := false.B
     decoder2.io.in.valid := false.B
   }
