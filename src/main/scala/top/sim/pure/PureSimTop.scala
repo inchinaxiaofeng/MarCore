@@ -30,7 +30,7 @@ class PureSimTop32 extends Module {
     Core = CoreConfig()
   )
   implicit val moduleName: String = this.name
-  val io = IO(new MEMIO())
+  val io = IO(Flipped(new MEMIO()))
   val core = Module(new Core()(config))
   val arbiter = Module(new AXI4_Arbiter_MMIO)
   val axi4ToMem = Module(new AXI4ToMemConverter(cnt = 4))
