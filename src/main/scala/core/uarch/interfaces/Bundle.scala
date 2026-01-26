@@ -52,10 +52,10 @@ class CtrlSignalIO extends MarCoreBundle {
   val srcBType = Output(SrcType())
   val fuType = Output(FuType())
   val fuCtrl = Output(FuCtrl())
-  val rfSrcA = Output(UInt(5.W))
-  val rfSrcB = Output(UInt(5.W))
+  val rfSrcA = Output(UInt(log2Up(NRReg).W))
+  val rfSrcB = Output(UInt(log2Up(NRReg).W))
   val rfWen = Output(Bool())
-  val rfDest = Output(UInt(5.W))
+  val rfDest = Output(UInt(log2Up(NRReg).W))
   val isMarCoreTrap = Output(Bool())
   val isSrcAForward = Output(Bool())
   val isSrcBForward = Output(Bool())
@@ -71,7 +71,7 @@ class DataSrcIO extends MarCoreBundle {
 
 class WriteBackIO extends MarCoreBundle {
   val rfWen = Output(Bool())
-  val rfDest = Output(UInt(5.W))
+  val rfDest = Output(UInt(log2Up(NRReg).W))
   val rfData = Output(UInt(XLEN.W))
 }
 

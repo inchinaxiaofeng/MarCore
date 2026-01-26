@@ -3,8 +3,6 @@ package utils
 import chisel3._
 import chisel3.util._
 
-import top.Settings
-
 /** `RegMap` 对象用于管理寄存器映射，并生成读写寄存器的逻辑。 它支持寄存器的读写，并允许为写操作指定转换函数。
   *
   * @example
@@ -168,11 +166,11 @@ object MaskedRegMap {
 
   /** 表示可写的掩码。
     */
-  def WritableMask = Fill(if (Settings.get("IsRV32")) 32 else 64, true.B)
+  def WritableMask(is32: Boolean) = Fill(if (is32) 32 else 64, true.B)
 
   /** 表示不可写的掩码。
     */
-  def UnwritableMask = 0.U(if (Settings.get("IsRV32")) 32.W else 64.W)
+  def UnwritableMask(is32: Boolean) = 0.U(if (is32) 32.W else 64.W)
 
   /** 创建一个带掩码的寄存器映射条目。
     *
@@ -181,7 +179,7 @@ object MaskedRegMap {
     * @param reg
     *   寄存器。
     * @param wmask
-    *   写掩码。
+    *   写掩码。默认为32位
     * @param wfn
     *   写操作的转换函数 (UInt => UInt)。
     * @param rmask
@@ -192,9 +190,9 @@ object MaskedRegMap {
   def apply(
       addr: Int,
       reg: UInt,
-      wmask: UInt = WritableMask,
+      wmask: UInt = WritableMask(true),
       wfn: UInt => UInt = (x => x),
-      rmask: UInt = WritableMask
+      rmask: UInt = WritableMask(true)
   ) = (addr, (reg, wmask, wfn, rmask))
 
   def generate(
@@ -203,7 +201,8 @@ object MaskedRegMap {
       rdata: UInt,
       waddr: UInt,
       wen: Bool,
-      wdata: UInt
+      wdata: UInt,
+      unwmask: UInt = UnwritableMask(true)
   ): Unit = {
     val chiselMapping = mapping.map { case (a, (r, wm, w, rm)) =>
       (a.U, r, wm, w, rm)
@@ -213,7 +212,7 @@ object MaskedRegMap {
       chiselMapping.map { case (a, r, wm, w, rm) => (a, r & rm) }
     )
     chiselMapping.map { case (a, r, wm, w, rm) =>
-      if (w != null && wm != UnwritableMask) when(wen && waddr === a) {
+      if (w != null && wm != unwmask) when(wen && waddr === a) {
         r := w(MaskData(r, wdata, wm))
       }
     }

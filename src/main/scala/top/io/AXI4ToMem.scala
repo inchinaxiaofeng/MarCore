@@ -22,7 +22,7 @@ class MEMIO extends MarCoreBundle {
 class AXI4ToMemConverter(cnt: Int) extends MarCoreModule {
   implicit val moduleName: String = this.name
   val io = IO(Flipped(new AXI4))
-  val mem = IO(new MEMIO())
+  val mem = IO(Flipped(new MEMIO()))
   assert(
     !io.ar.valid || (io.ar.bits.burst === AXI4Parameters.BURST_WRAP && (io.ar.bits.len === 1.U | io.ar.bits.len === 3.U | io.ar.bits.len === 7.U | io.ar.bits.len === 15.U))
   )

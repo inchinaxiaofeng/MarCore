@@ -39,5 +39,7 @@ class PureSimTop32 extends Module {
   core.io.dmem.toAXI4(isFromCache = true) <> arbiter.LoadStore
   core.io.mmio.toAXI4(isFromCache = false) <> arbiter.MMIO
 
-  arbiter.Arbiter <> axi4ToMem.mem
+  arbiter.Arbiter <> axi4ToMem.io
+
+  io <> axi4ToMem.mem
 }

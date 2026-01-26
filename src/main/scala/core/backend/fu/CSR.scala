@@ -148,7 +148,7 @@ class CSR(implicit val p: MarCoreConfig)
     MaskedRegMap(
       Mstatus,
       mstatus,
-      "hffffffffffffffff".U(64.W),
+      ~0.U(XLEN.W),
       mstatusUpdateSideEffect
     ),
     MaskedRegMap(Mtvec, mtvec),

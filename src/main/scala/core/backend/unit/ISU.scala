@@ -51,12 +51,12 @@ class ISU(implicit val p: MarCoreConfig) extends MarCoreModule {
   val srcAForward = srcADependWB && Mux(dontForward, !srcADependEX, true.B)
   val srcBForward = srcBDependWB && Mux(dontForward, !srcBDependEX, true.B)
 
-  val sb = Module(new ScoreBoard)
+  val sb = new ScoreBoard
   val srcAReady = !sb.isBusy(rfSrcA) || srcAForwardNextCycle || srcAForward
   val srcBReady = !sb.isBusy(rfSrcB) || srcBForwardNextCycle || srcBForward
   io.out.valid := io.in(0).valid && srcAReady && srcBReady
 
-  val rf = Module(new RegFile)
+  val rf = new RegFile
 
   io.out.bits.data.srcA := Mux1H(
     List(

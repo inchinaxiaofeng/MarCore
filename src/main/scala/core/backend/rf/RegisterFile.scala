@@ -7,7 +7,7 @@ import chisel3.util.experimental.BoringUtils
 import defs._
 import top.Settings
 
-class RegFile(implicit val p: MarCoreConfig) extends MarCoreModule {
+class RegFile(implicit val p: MarCoreConfig) extends HasMarCoreParameter {
   val rf = Mem(NRReg, UInt(XLEN.W))
   def read(addr: UInt): UInt = Mux(addr === 0.U, 0.U, rf(addr))
   def write(addr: UInt, data: UInt) = { rf(addr) := data(XLEN - 1, 0) }
@@ -19,7 +19,7 @@ class RegFile(implicit val p: MarCoreConfig) extends MarCoreModule {
 //	}
 }
 
-class ScoreBoard(implicit val p: MarCoreConfig) extends MarCoreModule {
+class ScoreBoard(implicit val p: MarCoreConfig) extends HasMarCoreParameter {
   val busy = RegInit(0.U(NRReg.W))
   def isBusy(idx: UInt): Bool = busy(idx)
   def mask(idx: UInt) = (1.U(NRReg.W) << idx)(NRReg - 1, 0)
