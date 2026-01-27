@@ -32,6 +32,7 @@ case class MarCoreConfig(
     Mem: MemConfig,
     Stat: StatConfig,
     Core: CoreConfig,
+    Diff: DiffConfig,
     FPGAPlatform: Boolean = true,
     EnableDebug: Boolean = false,
     EnhancedLog: Boolean = true

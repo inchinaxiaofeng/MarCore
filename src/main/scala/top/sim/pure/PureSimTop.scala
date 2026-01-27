@@ -19,6 +19,9 @@ import config.{
 import bus.axi4.AXI4_Arbiter_MMIO
 import top.io.MEMIO
 import top.io.AXI4ToMemConverter
+import telemetry.difftest.{DiffEssentialIO}
+import config.DiffConfig
+import telemetry.difftest.DiffRegIO
 
 class PureSimTop32 extends Module {
   lazy val config = MarCoreConfig(
@@ -27,7 +30,8 @@ class PureSimTop32 extends Module {
     Log = LogConfig(),
     Mem = MemConfig(),
     Stat = StatConfig(),
-    Core = CoreConfig()
+    Core = CoreConfig(),
+    Diff = DiffConfig(diffRegFile = true)
   )
   implicit val moduleName: String = this.name
   val io = IO(Flipped(new MEMIO()))
@@ -42,4 +46,32 @@ class PureSimTop32 extends Module {
   arbiter.Arbiter <> axi4ToMem.io
 
   io <> axi4ToMem.mem
+
+  // Difftest
+  if (config.Diff.isEnabled) {
+    val diffEssenIO = IO(Output(new DiffEssentialIO))
+    diffEssenIO.valid := BoringUtils.tapAndRead(core.backend.wbu.io.in.valid)
+    diffEssenIO.pc := BoringUtils.tapAndRead(
+      core.backend.wbu.io.in.bits.decode.cf.pc
+    )
+    diffEssenIO.inst := BoringUtils.tapAndRead(
+      core.backend.wbu.io.in.bits.decode.cf.instr
+    )
+    diffEssenIO.isRVC := false.B // 并没有添加相关架构的支持
+
+    if (config.Diff.diffRegFile) {
+      val diffRegIO = IO(Output(new DiffRegIO))
+      diffRegIO.wen := BoringUtils.tapAndRead(core.backend.wbu.io.wb.rfWen)
+      diffRegIO.wdata := BoringUtils.tapAndRead(core.backend.wbu.io.wb.rfData)
+      diffRegIO.dest := BoringUtils.tapAndRead(core.backend.wbu.io.wb.rfDest)
+    }
+
+    if (config.Diff.diffSystem) {
+      assert
+    }
+
+    if (config.Diff.diffMemory) {
+      assert
+    }
+  }
 }
