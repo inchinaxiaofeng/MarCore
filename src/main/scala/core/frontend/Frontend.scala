@@ -83,13 +83,6 @@ class Frontend_embedded(implicit val p: MarCoreConfig) extends MarCoreModule {
     idu.io.in(1).bits.pnpc
   )
 
-  if (Settings.get("Statistic")) {
-    val statistic_front_hunger = Module(new STATISTIC_FRONT_HUNGER)
-    statistic_front_hunger.io.clk := clock
-    statistic_front_hunger.io.rst := reset
-    statistic_front_hunger.io.ifu_hunger := !ifu.io.imem.resp.valid
-    statistic_front_hunger.io.idu_hunger := !idu.io.in(0).valid
-  }
 }
 
 //class Frontend_inorder(implicit val p: MarCoreConfig) extends MarCoreModule {

@@ -16,13 +16,15 @@ import java.nio.file.{Files, Path}
 import core.backend.fu._
 import core.mem.cache.Cache
 import top.sim.pure.PureSimTop32
+import top.sta.yosys.YosysSTACore
 
 /** `mill MarCore.runMain Elaborate` to run this.
   */
 object Elaborate extends App {
   // 1) 在这里列出所有要生成的（模块名，输出目录）对
   val jobs = Seq(
-    ("PureSim", "build/top/pure")
+    ("PureSim", "build/top/pure"),
+    ("Yosys-Sta", "build/top/sta")
     // 如果还有其他 top，就继续加：
     // ("YourTop", "out/yourtop")
   )
@@ -30,6 +32,7 @@ object Elaborate extends App {
   // 2) 根据名字返回一个 Generator 函数
   def makeGen(name: String): () => RawModule = name match {
     case "PureSim" => () => new PureSimTop32()
+    case "Yosys-Sta" => () => new YosysSTACore()
     // case "YourTop"     => () => new YourTop()
     case other => throw new IllegalArgumentException(s"Unknown top: $other")
   }

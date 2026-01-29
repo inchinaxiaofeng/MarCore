@@ -63,7 +63,7 @@ class PureSimTop32 extends Module {
       val diffRegIO = IO(Output(new DiffRegIO))
       diffRegIO.wen := BoringUtils.tapAndRead(core.backend.wbu.io.wb.rfWen)
       diffRegIO.wdata := BoringUtils.tapAndRead(core.backend.wbu.io.wb.rfData)
-      diffRegIO.dest := BoringUtils.tapAndRead(core.backend.wbu.io.wb.rfDest)
+      diffRegIO.wdest := BoringUtils.tapAndRead(core.backend.wbu.io.wb.rfDest)
     }
 
     if (config.Diff.diffSystem) {

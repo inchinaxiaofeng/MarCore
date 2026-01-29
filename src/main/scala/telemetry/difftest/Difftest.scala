@@ -22,7 +22,7 @@ class DiffEssentialIO() extends MarCoreBundle {
 
 class DiffRegIO() extends MarCoreBundle {
   val wen = Bool()
-  val dest = if (ISA.baseType == RV32E) UInt(4.W) else UInt(5.W)
+  val wdest = if (ISA.baseType == RV32E) UInt(4.W) else UInt(5.W)
   val wdata = UInt(XLEN.W)
 }
 
