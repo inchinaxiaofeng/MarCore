@@ -22,12 +22,15 @@ import top.io.AXI4ToMemConverter
 import telemetry.difftest.{DiffEssentialIO}
 import config.DiffConfig
 import telemetry.difftest.DiffRegIO
+import utils.LogLevel
+import utils.LogUtil
 
 class PureSimTop32 extends Module {
+  LogUtil.setLogLevel(LogLevel.DEBUG)
   lazy val config = MarCoreConfig(
     FPGAPlatform = false,
-    System = SystemConfig(resetVector = 0x0L, mmio = Seq()),
-    Log = LogConfig(),
+    System = SystemConfig(mmio = Seq()),
+    Log = LogConfig(LogCache = true),
     Mem = MemConfig(),
     Stat = StatConfig(),
     Core = CoreConfig(),
