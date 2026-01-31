@@ -16,6 +16,7 @@ sealed trait DifftestBaseBundle extends MarCoreBundle {}
 class DiffEssentialIO() extends MarCoreBundle {
   val valid = Bool()
   val pc = UInt(VAddrBits.W)
+  val npc = UInt(VAddrBits.W)
   val inst = UInt(32.W)
   val isRVC = Bool()
 }

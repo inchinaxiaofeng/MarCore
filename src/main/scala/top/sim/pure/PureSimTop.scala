@@ -54,6 +54,9 @@ class PureSimTop32 extends Module {
     diffEssenIO.pc := BoringUtils.tapAndRead(
       core.backend.wbu.io.in.bits.decode.cf.pc
     )
+    diffEssenIO.npc := BoringUtils.tapAndRead(
+      core.backend.wbu.io.in.bits.decode.cf.pnpc
+    ) // 当前架构之中, 只要提交了, 其实就是已经可以用的了.
     diffEssenIO.inst := BoringUtils.tapAndRead(
       core.backend.wbu.io.in.bits.decode.cf.instr
     )
